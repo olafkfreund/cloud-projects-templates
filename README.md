@@ -25,7 +25,7 @@ nix flake init -t github:olafkfreund/cloud-projects-templates#gcp
 direnv allow        # or: devenv shell
 ```
 
-Just want to try one? `devenv --from "github:olafkfreund/cloud-projects-templates?dir=templates/aws" shell` opens a shell without copying anything.
+`nix run` and `nix flake init` write the project files: `AGENTS.md`, skills, `.mcp.json`, `secrets.nix` and `devenv.yaml`. `devenv --from …` only opens a temporary shell with the tools and writes none of these, so don't use it to start a project.
 
 Running `nix run … -- <provider>` again in an existing project adds that provider. It never overwrites your files.
 
