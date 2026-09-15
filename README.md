@@ -7,7 +7,7 @@ This repo sets up a cloud project folder in one command. You get:
 - **read-only MCP servers** that AI agents use to inspect your cloud accounts
 - **agenix**-encrypted secrets
 
-Providers: **AWS**, **Azure**, **GCP**, **Oracle Cloud (OCI)** and **Kubernetes**.
+Providers: **AWS**, **Azure**, **GCP**, **Oracle Cloud (OCI)**, **Kubernetes**, **Cloudflare**, **Hetzner Cloud** and **DigitalOcean**.
 
 ## Quick start
 
@@ -37,6 +37,12 @@ Running `nix run … -- <provider>` again in an existing project adds that provi
 | MCP servers (read-only) | terraform (registry) | aws-api, aws-docs | azure | gcloud (allowlist) | oci | kubernetes |
 | Skills | `terraform`, `secrets` | `aws` | `azure` | `gcp` | `oci` | `kubernetes` |
 
+| | cloudflare | hetzner | digitalocean |
+|---|---|---|---|
+| Tools | wrangler, cloudflared, flarectl | hcloud | doctl |
+| MCP servers | cloudflare-docs, cloudflare-api (read token) | none, as there is no official server | digitalocean-docs, digitalocean (read token) |
+| Skills | `cloudflare` | `hetzner` | `digitalocean` |
+
 Files in a generated project:
 
 ```
@@ -61,6 +67,8 @@ The agent gets the permissions of **your CLI login**, restricted further as foll
 | terraform | registry toolsets only |
 | gcloud | **No read-only mode.** A command allowlist in `.mcp/gcloud-allow.json`. Use a Viewer-only service account. |
 | oci | **No read-only mode.** Use a read-only OCI profile (`OCI_CLI_PROFILE`). |
+| cloudflare-api | **No read-only mode.** Token scope: store a "Read all resources" token as `CLOUDFLARE_READ_TOKEN`. If a browser authorisation prompt appears, don't approve it; rotate the token. |
+| digitalocean | **No read-only mode.** Token scope: store a Read Only token as `DIGITALOCEAN_READ_TOKEN`. |
 
 Log in first (`aws-vault exec <profile> -- claude`, `az login`, `gcloud auth login`, `oci session authenticate`). Each skill's `references/mcp.md` explains how to allow writes.
 
