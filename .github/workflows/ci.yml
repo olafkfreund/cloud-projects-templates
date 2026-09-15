@@ -1,0 +1,87 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  flake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nix flake check -L # templates-fresh + skills
+
+  template:
+    needs: flake
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        providers: [aws, azure, gcp, oci, kubernetes, "aws azure"]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.os == 'macos-latest' }} # informative until stable
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - run: nix profile add nixpkgs#devenv
+      - name: generate project and run devenv test
+        env:
+          PROVIDERS: ${{ matrix.providers }}
+        run: |
+          d=$(mktemp -d)
+          # shellcheck disable=SC2086
+          nix run . -- $PROVIDERS --into "$d"
+          cd "$d" && git init -q && git add -A
+          devenv --override-input cloud "path:$GITHUB_WORKSPACE" test
+
+  secrets:
+    needs: flake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - run: nix profile add nixpkgs#devenv
+      - name: secrets smoke test
+        run: |
+          d=$(mktemp -d)
+          nix run . -- aws --into "$d"
+          cd "$d" && git init -q && git add -A
+          # shellcheck disable=SC2016 # expands inside the devenv shell
+          devenv --override-input cloud "path:$GITHUB_WORKSPACE" shell -- bash -euo pipefail -c '
+            nix shell nixpkgs#age -c age-keygen -o "$RUNNER_TEMP/key" 2>/dev/null
+            pub=$(nix shell nixpkgs#age -c age-keygen -y "$RUNNER_TEMP/key")
+            sed -i "s|# \"ssh-ed25519 AAAA… you@host\"|\"$pub\"|" secrets.nix
+            export AGENIX_IDENTITY=$RUNNER_TEMP/key
+            printf s3cr3t | secret-add T
+            test "$(secret-run --only T -- printenv T)" = s3cr3t
+            test "$(secret-list)" = T
+            secret-rekey
+            test "$(secret-run --only T -- printenv T)" = s3cr3t
+            ! grep -r s3cr3t --exclude-dir=.devenv --exclude-dir=.git .
+            printf x > secrets/plain && git add secrets/plain
+            ! git -c user.email=ci@ci -c user.name=ci commit -qm plaintext
+          '
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - run: nix run nixpkgs#trivy -- fs --scanners secret --exit-code 1 .

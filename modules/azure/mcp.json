@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "azure": {
+      "command": "azure-mcp",
+      "args": ["server", "start", "--read-only", "--mode", "namespace"]
+    }
+  }
+}

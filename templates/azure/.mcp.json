@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "azure": {
+      "command": "azure-mcp",
+      "args": [
+        "server",
+        "start",
+        "--read-only",
+        "--mode",
+        "namespace"
+      ]
+    },
+    "terraform": {
+      "command": "terraform-mcp-server",
+      "args": [
+        "stdio",
+        "--toolsets",
+        "registry,registry-private"
+      ],
+      "env": {
+        "TFE_TOKEN": "${TFE_TOKEN:-}"
+      }
+    }
+  }
+}

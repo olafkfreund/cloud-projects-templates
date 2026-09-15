@@ -1,0 +1,15 @@
+{
+  "allow": [
+    "config list",
+    "auth list",
+    "projects list",
+    "projects describe",
+    "compute instances list",
+    "compute instances describe",
+    "container clusters list",
+    "run services list",
+    "storage buckets list",
+    "iam service-accounts list",
+    "logging read"
+  ]
+}
