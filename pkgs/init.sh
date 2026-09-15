@@ -72,5 +72,7 @@ for p in "${selected[@]}"; do
   case $p in
     gcp) echo "WARNING: the gcloud MCP server has no read-only mode; run agents as a Viewer-only service account." >&2 ;;
     oci) echo "WARNING: the OCI MCP server has no read-only mode; set OCI_CLI_PROFILE to a read-only profile." >&2 ;;
+    cloudflare) echo "WARNING: the Cloudflare API MCP server has no read-only mode; store a 'Read all resources' token as CLOUDFLARE_READ_TOKEN." >&2 ;;
+    digitalocean) echo "WARNING: the DigitalOcean MCP server has no read-only mode; store a Read Only token as DIGITALOCEAN_READ_TOKEN." >&2 ;;
   esac
 done

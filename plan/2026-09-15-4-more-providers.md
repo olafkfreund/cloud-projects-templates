@@ -77,6 +77,8 @@ Not added: `cloudflare-cli` (third party) and `packer` (unfree).
 - **The `mcp-remote` stdio bridge avoids Claude Code blanking credential-like variables in remote headers.**
 - **OAuth is documented as an alternative only**, because its scopes can't be pinned in the repo.
 
+*Step 0 result:* `@digitalocean/mcp@1.0.70` answers `initialize`. `mcp-remote@0.14.2` sends the `Authorization` header, and Cloudflare returns 401 for an invalid token. **But** `mcp-remote` then falls back to browser OAuth, and no flag disables that. The Cloudflare skill and `agents.md` therefore warn: never approve that prompt; rotate the read-only token instead.
+
 **Write opt-in** is documented in each skill's `mcp.md`: put a write token in the project's own `.mcp.json`, with a warning.
 
 **D6. Init warnings.** Add two branches to the existing `case $p in` block in `pkgs/init.sh`:

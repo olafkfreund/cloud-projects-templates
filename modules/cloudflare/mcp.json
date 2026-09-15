@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "cloudflare-docs": { "type": "http", "url": "https://docs.mcp.cloudflare.com/mcp" },
+    "cloudflare-api": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@0.14.2", "https://mcp.cloudflare.com/mcp", "--header", "Authorization:${CF_MCP_AUTH}"],
+      "env": { "CF_MCP_AUTH": "Bearer ${CLOUDFLARE_READ_TOKEN}" }
+    }
+  }
+}
