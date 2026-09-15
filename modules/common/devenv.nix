@@ -134,7 +134,15 @@ in
     };
   };
 
+  # Nix python packages (awscli2, cfn-lint, oci-cli, …) export PYTHONPATH with their
+  # python3.14 site-packages. uvx MCP servers run their own python and crash importing
+  # those (pydantic_core). The nix CLIs are wrapped and don't need it.
+  enterShell = ''
+    unset PYTHONPATH
+  '';
+
   enterTest = ''
+    [ -z "''${PYTHONPATH:-}" ] || { echo "PYTHONPATH leaks into the shell and breaks uvx MCP servers" >&2; exit 1; }
     terraform version
     tflint --version
     trivy --version
