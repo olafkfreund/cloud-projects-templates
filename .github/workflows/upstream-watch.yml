@@ -1,0 +1,77 @@
+name: upstream-watch
+
+# Monthly check whether issues blocked on upstream can move. Comments once per issue.
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  containerapp: # issue #5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: try building azure-cli with the containerapp extension
+        id: build
+        run: |
+          ok=true
+          for ref in github:cachix/devenv-nixpkgs/rolling github:NixOS/nixpkgs/nixos-unstable; do
+            nix build --no-link --impure --expr \
+              "let p = (builtins.getFlake \"$ref\").legacyPackages.x86_64-linux; in p.azure-cli.withExtensions [ p.azure-cli.extensions.containerapp ]" \
+              || ok=false
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+      - name: comment on #5 when it builds
+        if: steps.build.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          marker="<!-- upstream-watch:containerapp -->"
+          gh issue view 5 --json comments --jq '.comments[].body' | grep -qF "$marker" && exit 0
+          gh issue comment 5 --body "$marker
+          upstream-watch: \`azure-cli.withExtensions [ azure-cli.extensions.containerapp ]\` now **builds** on devenv-nixpkgs/rolling and nixos-unstable. Re-add it to \`modules/azure/devenv.nix\` and update \`skills/azure\`. (Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+
+  aws-mcp: # issue #3
+    runs-on: ubuntu-latest
+    steps:
+      - name: list remote AWS MCP Server tools and annotations
+        run: |
+          set -euo pipefail
+          u=https://aws-mcp.us-east-1.api.aws/mcp
+          h=(-H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -H 'MCP-Protocol-Version: 2025-06-18')
+          curl -fsS -D headers "${h[@]}" -X POST "$u" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"upstream-watch","version":"1"}}}' >/dev/null
+          sid=$(grep -i '^mcp-session-id:' headers | cut -d' ' -f2 | tr -d '\r')
+          s=(); [ -n "$sid" ] && s=(-H "Mcp-Session-Id: $sid")
+          curl -fsS "${h[@]}" "${s[@]}" -X POST "$u" -d '{"jsonrpc":"2.0","method":"notifications/initialized"}' >/dev/null
+          curl -fsS "${h[@]}" "${s[@]}" -X POST "$u" -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' >raw
+          { sed -n 's/^data: //p' raw; } >tools.json
+          [ -s tools.json ] || cp raw tools.json
+          jq -e '.result.tools | length > 0' tools.json >/dev/null # fail loudly if the format changes
+          jq -r '.result.tools[] | "\(.name) readOnlyHint=\(.annotations.readOnlyHint)"' tools.json | tee tools.txt
+      - name: comment on #3 if a read-only API tool appears
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # read-only tools as of 2026-09-15 that cannot call AWS APIs
+          KNOWN: "aws___get_tasks aws___get_regional_availability aws___list_regions aws___read_documentation aws___retrieve_skill aws___search_documentation"
+        run: |
+          new=$(jq -r --arg known "$KNOWN" '($known | split(" ")) as $k
+            | .result.tools[] | select(.annotations.readOnlyHint == true and (.name | IN($k[]) | not)) | .name' tools.json)
+          [ -n "$new" ] || { echo "no new read-only tools; #3 stays blocked"; exit 0; }
+          marker="<!-- upstream-watch:aws-mcp:$(echo "$new" | sort | tr '\n' ',') -->"
+          gh issue view 3 --repo "$GITHUB_REPOSITORY" --json comments --jq '.comments[].body' | grep -qF "$marker" && exit 0
+          gh issue comment 3 --repo "$GITHUB_REPOSITORY" --body "$marker
+          upstream-watch: the remote AWS MCP Server now exposes **new read-only tools**: \`$(echo "$new" | tr '\n' ' ')\`. Check whether any can call AWS APIs read-only. If so, #3 can migrate.
+
+          Full tool list:
+          \`\`\`
+          $(cat tools.txt)
+          \`\`\`
+          (Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
