@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "oci": {
+      "command": "uvx",
+      "args": [
+        "oracle.oci-cloud-mcp-server==2.2.3"
+      ],
+      "env": {
+        "OCI_CONFIG_PROFILE": "${OCI_CLI_PROFILE:-DEFAULT}",
+        "OCI_MCP_AUTH_TYPE": "auto",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "terraform": {
+      "command": "terraform-mcp-server",
+      "args": [
+        "stdio",
+        "--toolsets",
+        "registry,registry-private"
+      ],
+      "env": {
+        "TFE_TOKEN": "${TFE_TOKEN:-}"
+      }
+    }
+  }
+}

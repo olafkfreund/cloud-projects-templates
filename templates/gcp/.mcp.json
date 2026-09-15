@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "gcloud": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@google-cloud/gcloud-mcp@0.5.3",
+        "--config",
+        "${DEVENV_ROOT}/.mcp/gcloud-allow.json"
+      ]
+    },
+    "terraform": {
+      "command": "terraform-mcp-server",
+      "args": [
+        "stdio",
+        "--toolsets",
+        "registry,registry-private"
+      ],
+      "env": {
+        "TFE_TOKEN": "${TFE_TOKEN:-}"
+      }
+    }
+  }
+}

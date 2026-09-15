@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "kubernetes": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "kubernetes-mcp-server@0.0.66",
+        "--read-only",
+        "--disable-multi-cluster"
+      ]
+    },
+    "terraform": {
+      "command": "terraform-mcp-server",
+      "args": [
+        "stdio",
+        "--toolsets",
+        "registry,registry-private"
+      ],
+      "env": {
+        "TFE_TOKEN": "${TFE_TOKEN:-}"
+      }
+    }
+  }
+}
