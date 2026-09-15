@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 issue: 1
 intent: intent/2026-09-15-1-cloud-devenv-templates.md
 ---
