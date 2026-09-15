@@ -43,7 +43,7 @@ The same script generates the committed `templates/<p>`, and a check fails if th
 | Module | Packages |
 |---|---|
 | common | `terraform tflint trivy terraform-docs infracost jq yq-go age uv nodejs terraform-mcp-server` |
-| aws | `awscli2 ssm-session-manager-plugin aws-vault python3Packages.cfn-lint eksctl`, plus the devenv `aws-vault` integration (`enable`, `profile`, `terraformWrapper.enable`) |
+| aws | `awscli2 ssm-session-manager-plugin aws-vault python3Packages.cfn-lint eksctl`, with the devenv `aws-vault` integration documented as a per-project opt-in (`enable`, `profile`, `awscliWrapper`/`terraformWrapper`). *Step 6:* the integration needs a fixed profile name at build time, and wrapping `aws`/`terraform` would break other login methods, so the shared module only installs `aws-vault` |
 | azure | `azure-cli.withExtensions [aks-preview containerapp]`, `bicep kubelogin azure-mcp` |
 | gcp | `google-cloud-sdk.withExtraComponents [gke-gcloud-auth-plugin]` |
 | oci | `oci-cli` |
@@ -51,7 +51,7 @@ The same script generates the committed `templates/<p>`, and a check fails if th
 
 Excluded, documented as opt-in: `packer`, `aws-cdk-cli`, `aws-sam-cli`, `checkov`. Out of scope: `azd` and `sops`.
 
-**D6. Git hooks** (in common). *Step 4:* devenv 2.x requires a `git-hooks` input (`github:cachix/git-hooks.nix`, following nixpkgs) in the base `devenv.yaml`. `terraform-format` (default terraform package), `tflint`, `detect-private-keys`, `shellcheck`, and a local `secrets-age-only` hook that rejects anything in `secrets/` other than `*.age` and `.gitkeep`.
+**D6. Git hooks** (in common). *Step 6:* the base `.envrc` needs a `# shellcheck shell=bash` directive, or the shellcheck hook fails. *Step 4:* devenv 2.x requires a `git-hooks` input (`github:cachix/git-hooks.nix`, following nixpkgs) in the base `devenv.yaml`. `terraform-format` (default terraform package), `tflint`, `detect-private-keys`, `shellcheck`, and a local `secrets-age-only` hook that rejects anything in `secrets/` other than `*.age` and `.gitkeep`.
 
 **D7. MCP servers.** All are pinned, read-only by default, and use the CLI login with no embedded credentials:
 
