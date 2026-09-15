@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 issue: 4
 intent: intent/2026-09-15-4-more-providers.md
 ---
