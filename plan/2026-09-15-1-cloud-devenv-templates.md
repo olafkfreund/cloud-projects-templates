@@ -44,7 +44,7 @@ The same script generates the committed `templates/<p>`, and a check fails if th
 |---|---|
 | common | `terraform tflint trivy terraform-docs infracost jq yq-go age uv nodejs terraform-mcp-server` |
 | aws | `awscli2 ssm-session-manager-plugin aws-vault python3Packages.cfn-lint eksctl`, with the devenv `aws-vault` integration documented as a per-project opt-in (`enable`, `profile`, `awscliWrapper`/`terraformWrapper`). *Step 6:* the integration needs a fixed profile name at build time, and wrapping `aws`/`terraform` would break other login methods, so the shared module only installs `aws-vault` |
-| azure | `azure-cli.withExtensions [aks-preview containerapp]`, `bicep kubelogin azure-mcp` |
+| azure | `azure-cli.withExtensions [aks-preview]`, `bicep kubelogin azure-mcp`. *Step 7:* the `containerapp` extension fails to build in nixpkgs (it pins `kubernetes==24.2.0`), so it is omitted. Core `az containerapp` commands still work. |
 | gcp | `google-cloud-sdk.withExtraComponents [gke-gcloud-auth-plugin]` |
 | oci | `oci-cli` |
 | kubernetes | `kubectl kubernetes-helm k9s kustomize kubectx stern` |

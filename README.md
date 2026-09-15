@@ -33,7 +33,7 @@ Running `nix run … -- <provider>` again in an existing project adds that provi
 
 | | Every project | aws | azure | gcp | oci | kubernetes |
 |---|---|---|---|---|---|---|
-| Tools | terraform, tflint, trivy, terraform-docs, infracost, jq, yq, age (agenix-format secrets) | awscli2, aws-vault, ssm plugin, cfn-lint, eksctl | az (+aks-preview, containerapp), bicep, kubelogin | gcloud (+gke auth plugin) | oci-cli | kubectl, helm, k9s, kustomize, kubectx, stern |
+| Tools | terraform, tflint, trivy, terraform-docs, infracost, jq, yq, age (agenix-format secrets) | awscli2, aws-vault, ssm plugin, cfn-lint, eksctl | az (+aks-preview), bicep, kubelogin | gcloud (+gke auth plugin) | oci-cli | kubectl, helm, k9s, kustomize, kubectx, stern |
 | MCP servers (read-only) | terraform (registry) | aws-api, aws-docs | azure | gcloud (allowlist) | oci | kubernetes |
 | Skills | `terraform`, `secrets` | `aws` | `azure` | `gcp` | `oci` | `kubernetes` |
 
