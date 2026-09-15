@@ -31,6 +31,7 @@ This plan can be implemented without opening the intent or spec. Every approved 
 - Merges `modules/<p>/mcp.json` into `.mcp.json`, with existing entries winning.
 - Copies extra files into `.mcp/`.
 - Appends an `AGENTS.md` provider section between markers, so re-running doesn't duplicate it.
+  - *Step 5:* the section text lives in `modules/<p>/agents.md`, so provider data stays out of the script. The script also always copies the `terraform` and `secrets` skills and merges `modules/common/mcp.json`.
 - Prints the next steps.
 
 The same script generates the committed `templates/<p>`, and a check fails if they're stale.
@@ -75,7 +76,7 @@ GCP and OCI have no server-side read-only mode. The skills and `init` output tel
   - `ragenix` is dropped from D5.
   - `secret-run` decrypts with `age -d -i ${AGENIX_IDENTITY:-$HOME/.ssh/id_ed25519}` into its own environment, then `exec`s the command.
 - Nothing is decrypted in `enterShell`, and no plaintext is written to disk.
-- `.gitignore` excludes `.env* *.dec .mcp.local.json`.
+- `.gitignore` excludes `.env .env.* *.dec .mcp.local.json`. *Step 5:* the earlier `.env*` pattern also ignored `.envrc`.
 
 **D9. Agent context.**
 - Base `AGENTS.md` covers Terraform as the only IaC CLI, tags and naming, least privilege, login per provider, read-only MCP, secret rules and pointers to the skills. `CLAUDE.md` is the single line `@AGENTS.md`.

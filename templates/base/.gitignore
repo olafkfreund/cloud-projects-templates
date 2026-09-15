@@ -10,6 +10,7 @@ devenv.local.nix
 *.tfplan
 crash.log
 # never commit plaintext secrets
-.env*
+.env
+.env.*
 *.dec
 .mcp.local.json
