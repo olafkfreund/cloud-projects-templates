@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        providers: [aws, azure, gcp, oci, kubernetes, "aws azure"]
+        providers: [aws, azure, gcp, oci, kubernetes, cloudflare, hetzner, digitalocean, "aws azure", "aws cloudflare"]
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.os == 'macos-latest' }} # informative until stable
     steps:
