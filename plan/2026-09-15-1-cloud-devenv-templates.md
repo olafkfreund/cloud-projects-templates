@@ -41,7 +41,7 @@ The same script generates the committed `templates/<p>`, and a check fails if th
 
 | Module | Packages |
 |---|---|
-| common | `terraform tflint trivy terraform-docs infracost jq yq-go ragenix age uv nodejs terraform-mcp-server` |
+| common | `terraform tflint trivy terraform-docs infracost jq yq-go age uv nodejs terraform-mcp-server` |
 | aws | `awscli2 ssm-session-manager-plugin aws-vault python3Packages.cfn-lint eksctl`, plus the devenv `aws-vault` integration (`enable`, `profile`, `terraformWrapper.enable`) |
 | azure | `azure-cli.withExtensions [aks-preview containerapp]`, `bicep kubelogin azure-mcp` |
 | gcp | `google-cloud-sdk.withExtraComponents [gke-gcloud-auth-plugin]` |
@@ -69,6 +69,10 @@ GCP and OCI have no server-side read-only mode. The skills and `init` output tel
 **D8. Secrets use agenix.**
 - `secrets.nix` holds `recipients` and an entry per secret. `secrets/<NAME>.age` files are committed.
 - Scripts in common: `secret-add NAME` (reads stdin), `secret-edit`, `secret-rekey`, `secret-list` (names only) and `secret-run [--only A,B] -- CMD`.
+  - *Step 0 result:* `ragenix` ignores piped stdin. It opens `$EDITOR`, writes an empty secret or panics. So the scripts use plain `age` instead, reading recipients with `nix-instantiate --eval --strict --json -E '(import ./secrets.nix)."secrets/NAME.age".publicKeys'` and then `age -r … -o secrets/NAME.age`. The output is standard agenix format: verified that upstream `agenix -d` decrypts it, so users can still run `agenix -e` and NixOS `age.secrets` on these files.
+  - `secret-edit NAME` asks for a new value (stdin or a hidden prompt) and replaces the file, so no temp plaintext file is created.
+  - `secret-rekey` re-encrypts each file for the current recipients with `age -d | age -r`, in memory.
+  - `ragenix` is dropped from D5.
   - `secret-run` decrypts with `age -d -i ${AGENIX_IDENTITY:-$HOME/.ssh/id_ed25519}` into its own environment, then `exec`s the command.
 - Nothing is decrypted in `enterShell`, and no plaintext is written to disk.
 - `.gitignore` excludes `.env* *.dec .mcp.local.json`.
@@ -133,7 +137,7 @@ Each step is one commit, `feat(<area>): … (#1)`, on `feat/1-cloud-devenv-templ
    → verify: `nix-instantiate --parse secrets.nix` succeeds.
 4. **`modules/common/devenv.nix` and `mcp.json`.** Add the D5 packages, the D6 hooks, the D8 scripts and the D7 terraform MCP server.
    - Measure the first-shell build time for `terraform` (D12 risk).
-   - `enterTest` runs `terraform version`, `tflint --version`, `trivy --version`, `age --version`, `agenix --help`, `terraform-mcp-server --version`.
+   - `enterTest` runs `terraform version`, `tflint --version`, `trivy --version`, `age --version`, `terraform-mcp-server --version`.
    - `secret-add`:
      - The name must match `^[A-Z][A-Z0-9_]*$`.
      - It fails if `recipients` is empty.
