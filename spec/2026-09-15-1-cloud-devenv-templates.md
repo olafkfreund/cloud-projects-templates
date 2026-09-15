@@ -6,6 +6,11 @@ intent: intent/2026-09-15-1-cloud-devenv-templates.md
 
 # Spec: Multi-provider cloud devenv templates
 
+> **Revision 2026-09-15 (approver decision during implementation):**
+> - **Terraform is the only IaC CLI.** OpenTofu is dropped. Terraform is installed in every project, and the project's `devenv.yaml` permits only the unfree `terraform` package (`nixpkgs.permitted_unfree_packages: [terraform]`).
+> - **New `terraform` skill**, installed in every project alongside the `secrets` skill.
+> - This replaces every "OpenTofu first", "Terraform opt-in" and "no unfree packages by default" statement below. `packer` stays opt-in.
+
 ## Design
 
 ### 1. Repository layout

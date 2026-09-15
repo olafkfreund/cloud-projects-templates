@@ -15,12 +15,12 @@ This plan can be implemented without opening the intent or spec. Every approved 
 - `nix flake init -t github:olafkfreund/cloud-projects-templates#<p>` sets up one provider.
 - `devenv --from "github:…?dir=templates/<p>" shell` is documented only.
 
-**D2. Providers in v1:** `aws azure gcp oci kubernetes`. The `common` module and the `secrets` skill are always included. Kubernetes is opt-in, never implied.
+**D2. Providers in v1:** `aws azure gcp oci kubernetes`. The `common` module and the `secrets` and `terraform` skills are always included. Kubernetes is opt-in, never implied.
 
 **D3. Generated projects use standalone devenv, not flakes.**
 - `devenv.yaml` has the input `cloud: {url: github:olafkfreund/cloud-projects-templates, flake: false}`.
 - Modules are imported as `cloud/modules/<p>`, never copied.
-- `nixpkgs.allow_unfree: false` lives in the project's `devenv.yaml`, because remote imports don't carry it.
+- `nixpkgs.permitted_unfree_packages: [terraform]` lives in the project's `devenv.yaml`, because remote imports don't carry it. `allow_unfree` stays false.
 - The project's `devenv.nix` is an empty module for local additions.
 
 **D4. The init app** is a `writeShellApplication` with `runtimeInputs` coreutils, jq and gnused. It reads sources from `${self}` and does the following:
@@ -41,16 +41,16 @@ The same script generates the committed `templates/<p>`, and a check fails if th
 
 | Module | Packages |
 |---|---|
-| common | `opentofu tflint trivy terraform-docs infracost jq yq-go ragenix age uv nodejs terraform-mcp-server` |
-| aws | `awscli2 ssm-session-manager-plugin aws-vault python3Packages.cfn-lint eksctl`, plus the devenv `aws-vault` integration (`enable`, `profile`, `opentofuWrapper.enable`) |
+| common | `terraform tflint trivy terraform-docs infracost jq yq-go ragenix age uv nodejs terraform-mcp-server` |
+| aws | `awscli2 ssm-session-manager-plugin aws-vault python3Packages.cfn-lint eksctl`, plus the devenv `aws-vault` integration (`enable`, `profile`, `terraformWrapper.enable`) |
 | azure | `azure-cli.withExtensions [aks-preview containerapp]`, `bicep kubelogin azure-mcp` |
 | gcp | `google-cloud-sdk.withExtraComponents [gke-gcloud-auth-plugin]` |
 | oci | `oci-cli` |
 | kubernetes | `kubectl kubernetes-helm k9s kustomize kubectx stern` |
 
-Excluded, documented as opt-in: `terraform`, `packer`, `aws-cdk-cli`, `aws-sam-cli`, `checkov`. Out of scope: `azd` and `sops`.
+Excluded, documented as opt-in: `packer`, `aws-cdk-cli`, `aws-sam-cli`, `checkov`. Out of scope: `azd` and `sops`.
 
-**D6. Git hooks** (in common): `terraform-format` with package opentofu, `tflint`, `detect-private-keys`, `shellcheck`, and a local `secrets-age-only` hook that rejects anything in `secrets/` other than `*.age` and `.gitkeep`.
+**D6. Git hooks** (in common): `terraform-format` (default terraform package), `tflint`, `detect-private-keys`, `shellcheck`, and a local `secrets-age-only` hook that rejects anything in `secrets/` other than `*.age` and `.gitkeep`.
 
 **D7. MCP servers.** All are pinned, read-only by default, and use the CLI login with no embedded credentials:
 
@@ -74,7 +74,7 @@ GCP and OCI have no server-side read-only mode. The skills and `init` output tel
 - `.gitignore` excludes `.env* *.dec .mcp.local.json`.
 
 **D9. Agent context.**
-- Base `AGENTS.md` covers OpenTofu first, tags and naming, least privilege, login per provider, read-only MCP, secret rules and pointers to the skills. `CLAUDE.md` is the single line `@AGENTS.md`.
+- Base `AGENTS.md` covers Terraform as the only IaC CLI, tags and naming, least privilege, login per provider, read-only MCP, secret rules and pointers to the skills. `CLAUDE.md` is the single line `@AGENTS.md`.
 - Skill frontmatter has only `name` (equal to the directory name) and `description`. `SKILL.md` stays at or under 500 lines, and each file in `references/` at or under 300.
 - References: `well-architected`, `landing-zone`, `iam`, `cli-cheatsheet`, `terraform`, `mcp`. Each claim links to the official source:
   - AWS: Well-Architected Framework and Control Tower
@@ -89,6 +89,11 @@ GCP and OCI have no server-side read-only mode. The skills and `init` output tel
   - Each job runs `devenv --override-input cloud path:$GITHUB_WORKSPACE test`.
 - A secrets smoke test.
 - `uvx` and `npx` MCP servers are not launched in CI.
+
+**D12. Terraform only** (approver revision, 2026-09-15). OpenTofu is dropped, and `terraform` is in the common module for every project.
+- `skills/terraform/` is always installed. It holds `SKILL.md` plus `references/{project-structure,state,modules,testing,ci-cd,mcp}.md`, following the D9 limits and linking to official HashiCorp sources.
+- Each provider skill's `references/terraform.md` stays provider-specific and links to `../terraform/SKILL.md`.
+- **Risk:** unfree packages are not in cache.nixos.org, so `terraform` builds from source on first use. Step 4 measures the time. If it takes longer than 5 minutes, add input `nixpkgs-terraform: github:stackbuilders/nixpkgs-terraform` and its cachix cache to the base `devenv.yaml`, and update this plan in the same commit.
 
 **D11.** MIT licence. The repo contains no secrets or account IDs.
 
@@ -127,7 +132,8 @@ Each step is one commit, `feat(<area>): … (#1)`, on `feat/1-cloud-devenv-templ
      ```
    → verify: `nix-instantiate --parse secrets.nix` succeeds.
 4. **`modules/common/devenv.nix` and `mcp.json`.** Add the D5 packages, the D6 hooks, the D8 scripts and the D7 terraform MCP server.
-   - `enterTest` runs `tofu version`, `tflint --version`, `trivy --version`, `age --version`, `agenix --help`, `terraform-mcp-server --version`.
+   - Measure the first-shell build time for `terraform` (D12 risk).
+   - `enterTest` runs `terraform version`, `tflint --version`, `trivy --version`, `age --version`, `agenix --help`, `terraform-mcp-server --version`.
    - `secret-add`:
      - The name must match `^[A-Z][A-Z0-9_]*$`.
      - It fails if `recipients` is empty.
@@ -156,7 +162,7 @@ Each step is one commit, `feat(<area>): … (#1)`, on `feat/1-cloud-devenv-templ
 10. **Kubernetes.** Add the module, `mcp.json` and skill.
     - `enterTest` runs `kubectl version --client`, `helm version`, `k9s version --short`.
     → verify: `devenv test` passes, and `jq` finds `--read-only` in the kubernetes server args.
-11. **`skills/secrets/SKILL.md`.** Document the D8 workflow and rules: never print or decrypt to files, use `secret-run --only`, add recipients and rekey, rotate secrets.
+11. **`skills/secrets/SKILL.md` and `skills/terraform/` (D12).** Document the D8 workflow and rules: never print or decrypt to files, use `secret-run --only`, add recipients and rekey, rotate secrets.
     → verify: the frontmatter check from step 12 passes.
 12. **Flake outputs and checks.**
     - `templates.<p> = { path = ./templates/<p>; description; welcomeText; }` for each provider, and `templates.default = templates.aws`.
