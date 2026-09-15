@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "digitalocean-docs": {
+      "type": "http",
+      "url": "https://docs.mcp.digitalocean.com/mcp"
+    },
+    "digitalocean": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@digitalocean/mcp@1.0.70",
+        "--services",
+        "accounts,droplets,doks,apps,databases,networking,spaces,volumes,insights"
+      ],
+      "env": {
+        "DIGITALOCEAN_API_TOKEN": "${DIGITALOCEAN_READ_TOKEN}"
+      }
+    },
+    "terraform": {
+      "command": "terraform-mcp-server",
+      "args": [
+        "stdio",
+        "--toolsets",
+        "registry,registry-private"
+      ],
+      "env": {
+        "TFE_TOKEN": "${TFE_TOKEN:-}"
+      }
+    }
+  }
+}

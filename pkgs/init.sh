@@ -52,6 +52,7 @@ for p in "${selected[@]}"; do
   add_skill "$p"
   merge_mcp "$p"
   for f in "$SRC/modules/$p"/*.json; do
+    [ -e "$f" ] || continue # no json files (e.g. hetzner): unmatched glob
     [ "${f##*/}" = mcp.json ] && continue
     mkdir -p .mcp && copy "$f" .mcp/
   done

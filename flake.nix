@@ -19,6 +19,9 @@
         "gcp"
         "oci"
         "kubernetes"
+        "cloudflare"
+        "hetzner"
+        "digitalocean"
       ];
     in
     {

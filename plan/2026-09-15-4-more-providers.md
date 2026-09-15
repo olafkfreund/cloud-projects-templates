@@ -13,6 +13,7 @@ This plan can be implemented without opening the intent or spec. Every approved 
 **D1. Scope.** Add providers `cloudflare`, `hetzner` and `digitalocean`, following `AGENTS.md` ("Adding a provider").
 - **Unchanged:** `modules/common`, existing providers, the init script's composition logic, and the flake checks.
 - **Changed shared files:** `flake.nix` (`providers`), `.github/workflows/ci.yml` (matrix), `README.md`, root `AGENTS.md` if it lists providers, and `pkgs/init.sh` (warnings only).
+  - *Step 5:* `pkgs/init.sh` also needed a guard for an unmatched `modules/<p>/*.json` glob. Hetzner is the first provider with no json files, and the glob stayed literal, which created `.mcp/` and made `cp` fail.
 
 **D2. Files per provider:** `modules/<p>/{devenv.nix,agents.md}`, `modules/<p>/mcp.json` (not for Hetzner), `skills/<p>/SKILL.md`, `skills/<p>/references/{architecture,security,cli-cheatsheet,terraform,mcp}.md`, and the generated `templates/<p>/`.
 

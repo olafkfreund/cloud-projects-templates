@@ -1,0 +1,16 @@
+# devenv
+.devenv*
+.direnv
+devenv.local.nix
+.pre-commit-config.yaml
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+# never commit plaintext secrets
+.env
+.env.*
+*.dec
+.mcp.local.json
