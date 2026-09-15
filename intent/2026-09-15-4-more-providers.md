@@ -55,3 +55,10 @@ Issue #4 closes when all three providers pass CI and are documented in the READM
 2. **DigitalOcean MCP:** `@digitalocean/mcp` via `npx`, limited to a read-only or narrow service set if supported. OK?
 3. **Hetzner:** no official MCP server. Skip MCP (proposed), or accept a community server?
 4. **Scope:** do you want any more providers in this issue, such as Scaleway or Linode/Akamai, or keep it to these three?
+
+## Decisions (approver, 2026-09-15: proposals accepted)
+
+1. **Cloudflare MCP:** the docs server plus a read-only subset of Cloudflare's official servers. The exact servers are chosen in the spec after research.
+2. **DigitalOcean MCP:** `@digitalocean/mcp` via `npx`, limited to read-only or narrow services where supported.
+3. **Hetzner:** no MCP server, because there is no official one. The skill documents this.
+4. **Scope:** Cloudflare, Hetzner and DigitalOcean only.
