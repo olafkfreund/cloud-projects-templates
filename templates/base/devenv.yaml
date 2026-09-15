@@ -5,6 +5,11 @@ inputs:
   cloud:
     url: github:olafkfreund/cloud-projects-templates
     flake: false
+  git-hooks:
+    url: github:cachix/git-hooks.nix
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
 nixpkgs:
   # Only terraform (BUSL) is allowed as unfree. Add e.g. packer here to opt in.
   permitted_unfree_packages:

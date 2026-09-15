@@ -50,7 +50,7 @@ The same script generates the committed `templates/<p>`, and a check fails if th
 
 Excluded, documented as opt-in: `packer`, `aws-cdk-cli`, `aws-sam-cli`, `checkov`. Out of scope: `azd` and `sops`.
 
-**D6. Git hooks** (in common): `terraform-format` (default terraform package), `tflint`, `detect-private-keys`, `shellcheck`, and a local `secrets-age-only` hook that rejects anything in `secrets/` other than `*.age` and `.gitkeep`.
+**D6. Git hooks** (in common). *Step 4:* devenv 2.x requires a `git-hooks` input (`github:cachix/git-hooks.nix`, following nixpkgs) in the base `devenv.yaml`. `terraform-format` (default terraform package), `tflint`, `detect-private-keys`, `shellcheck`, and a local `secrets-age-only` hook that rejects anything in `secrets/` other than `*.age` and `.gitkeep`.
 
 **D7. MCP servers.** All are pinned, read-only by default, and use the CLI login with no embedded credentials:
 
@@ -97,6 +97,7 @@ GCP and OCI have no server-side read-only mode. The skills and `init` output tel
 **D12. Terraform only** (approver revision, 2026-09-15). OpenTofu is dropped, and `terraform` is in the common module for every project.
 - `skills/terraform/` is always installed. It holds `SKILL.md` plus `references/{project-structure,state,modules,testing,ci-cd,mcp}.md`, following the D9 limits and linking to official HashiCorp sources.
 - Each provider skill's `references/terraform.md` stays provider-specific and links to `../terraform/SKILL.md`.
+- *Step 4 measurement:* the first `devenv test`, including the Terraform build, took 123 s, under 5 minutes, so no `nixpkgs-terraform` input is needed.
 - **Risk:** unfree packages are not in cache.nixos.org, so `terraform` builds from source on first use. Step 4 measures the time. If it takes longer than 5 minutes, add input `nixpkgs-terraform: github:stackbuilders/nixpkgs-terraform` and its cachix cache to the base `devenv.yaml`, and update this plan in the same commit.
 
 **D11.** MIT licence. The repo contains no secrets or account IDs.
