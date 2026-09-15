@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 issue: 4
 spec: spec/2026-09-15-4-more-providers.md
 ---
