@@ -28,6 +28,7 @@
           description = "${p} cloud project: devenv, Terraform, agent skills, read-only MCP, agenix secrets";
           welcomeText = ''
             # ${p} project ready
+            0. `git init` if this folder is not a git repository yet (the git hooks need one)
             1. Add your public key to `recipients` in `secrets.nix`
             2. `direnv allow` (or `devenv shell`)
             3. Log in (see `AGENTS.md`), then start your agent: `secret-run -- claude`
@@ -46,7 +47,7 @@
             ${
               nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default
             } "$p" --into "$TMPDIR/$p" 2>/dev/null
-            ${pkgs.diffutils}/bin/diff -r --no-dereference "$TMPDIR/$p" ${self}/templates/$p \
+            ${pkgs.diffutils}/bin/diff -r --no-dereference -x .git "$TMPDIR/$p" ${self}/templates/$p \
               || { echo "templates/$p is stale: run nix run . -- $p --into templates/$p"; exit 1; }
           done
           touch $out
@@ -80,6 +81,7 @@
             jq
             gnused
             gnugrep
+            git
           ];
           runtimeEnv.SRC = "${self}";
           text = builtins.readFile ./pkgs/init.sh;
