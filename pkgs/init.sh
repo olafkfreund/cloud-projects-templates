@@ -22,6 +22,8 @@ done
 
 mkdir -p "$into"
 cd "$into"
+# devenv git hooks need a repository
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || git init -q
 
 copy() { cp -rn --no-preserve=mode "$@"; } # never overwrite, make store copies writable
 
