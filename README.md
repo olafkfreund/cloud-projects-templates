@@ -94,6 +94,60 @@ Use `cloud-troubleshoot` for a specific symptom. It relates current evidence to 
 suitable baseline and reports likely causes and missing evidence, without
 restarting resources, creating debug workloads, or changing permissions.
 
+### What you can do
+
+| Task | Available now |
+|---|---|
+| Establish an AWS baseline | Run `cloud-onboard-aws` for one account and explicit regions; get inventory, checks, evidence and coverage reports. |
+| Discover another provider | Ask an agent to use `cloud-onboarding` and the provider procedure. Collection and report assembly are guided; there is no equivalent automated command yet. |
+| Assess configuration gaps | AWS checks include root MFA/keys, open SSH/RDP security-group rules, encryption, RDS backup retention/public access, S3 protection/versioning, CloudTrail logging and required tags. Workload-dependent decisions remain manual. |
+| Investigate a problem | Ask an agent to use `cloud-troubleshoot` with a symptom, scope, time window and an existing baseline if available. It gathers evidence and distinguishes likely causes from unverified hypotheses. |
+| Prepare fixes | Use the provider and Terraform skills to turn reviewed findings into proposed IaC changes. Onboarding itself does not apply fixes. |
+| Reassess after changes | Run onboarding again to preserve a new dated report. Comparing runs is currently a manual or agent-assisted review; there is no automated diff command. |
+
+The skills are instructions for your coding agent, not additional shell commands.
+There is no scheduled scanning, hosted dashboard, automatic publication, or full
+CIS/compliance certification. The report's coverage determines what was assessed.
+
+### Your first assessment
+
+1. Create an AWS project using the quick start, or follow [Updates](#updates) to
+   adopt the command and skills in an existing project. Enter its `devenv shell`.
+2. Authenticate with your existing read-only AWS profile. For an SSO profile,
+   use `aws sso login --profile audit`; substitute your actual profile name.
+   Confirm the intended account ID and regions before running the example above.
+3. Run `cloud-onboard-aws` from the project's Git root. Replace the example
+   account, regions and environment label with your agreed scope.
+4. Open `report.md` in the directory printed by the command. Check coverage and
+   unknown results before prioritizing failures: denied access is an evidence
+   gap, and an empty partial inventory does not establish that resources are absent.
+5. Review the recommended actions and manual-review items. Use `inventory.json`
+   for resource evidence, `findings.json` for individual assessments, and
+   `coverage.json` for collection gaps and unsupported areas. The
+   [report format](skills/cloud-onboarding/references/report-format.md) describes
+   their contract.
+6. Propose and review fixes separately, then rerun the same scope to check the
+   observed result. Exit code 0 means collection succeeded, not that every check
+   passed; automation must also inspect findings and coverage.
+
+### Example agent requests
+
+Replace the example scope with your own. Start the agent inside the generated
+project so it can read the installed skills.
+
+> Use cloud-onboarding for AWS account 123456789012, profile audit, regions
+> eu-west-1 and eu-west-2, environment production. Create a read-only baseline,
+> summarize coverage gaps, and prioritize findings with their evidence.
+
+> Use cloud-onboarding for Azure tenant <tenant-id> and subscription
+> <subscription-id>. Follow the manual Azure discovery procedure, create a local
+> report, and distinguish missing configuration from unavailable evidence.
+
+> Use cloud-troubleshoot to investigate <symptom> in <account/project/cluster>
+> and <region/namespace> during <UTC time window>. Use <report-directory> as the
+> baseline. Gather read-only evidence and report likely causes, confidence and
+> the next checks needed.
+
 ## MCP servers are read-only
 
 The agent gets the permissions of **your CLI login**, restricted further as follows:
