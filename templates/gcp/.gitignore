@@ -14,3 +14,5 @@ crash.log
 .env.*
 *.dec
 .mcp.local.json
+# private cloud assessment metadata
+/reports/

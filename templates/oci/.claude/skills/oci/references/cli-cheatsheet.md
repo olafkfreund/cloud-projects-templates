@@ -32,7 +32,7 @@ export OCI_CLI_PROFILE=dev OCI_CLI_AUTH=security_token                     # eve
 oci os ns get --auth instance_principal                                    # on an OCI instance
 ```
 
-Never run `oci setup config` on a shared or agent machine unless a PEM is unavoidable; if it is, keep it in agenix: `secret-add oci-key` then `secret-run --only oci-key -- oci ...`.
+Prefer security-token or principal authentication. If a PEM is unavoidable, keep its source encrypted with agenix (`secret-add OCI_PRIVATE_KEY`) and use an explicitly managed private runtime key-file path. `secret-run` injects environment values; it does not materialize a PEM file for `key_file`. Never print or commit the decrypted key.
 
 ## Useful global options
 
@@ -52,7 +52,8 @@ Shorthands: `-c` = `--compartment-id`, `-ns` = `--namespace-name`, `-bn` = `--bu
 ## Discover the tenancy (read-only)
 
 ```
-T=$(oci iam tenancy get --tenancy-id "$(oci iam compartment list --query 'data[0]."compartment-id"' --raw-output)" --query data.id --raw-output)
+T=<expected-tenancy-ocid>  # from the agreed scope, not the first visible compartment
+oci iam tenancy get --tenancy-id "$T" --query data.id --raw-output
 oci iam region-subscription list --output table
 oci iam compartment list -c "$T" --compartment-id-in-subtree true --all \
   --query 'data[?"lifecycle-state"==`ACTIVE`].{name:name,id:id,parent:"compartment-id"}' --output table
@@ -123,3 +124,32 @@ oci search resource structured-search --query-text "query all resources where (d
 - Agent sessions: `OCI_CLI_PROFILE=ro-agent`. Anything that returns `NotAuthorizedOrNotFound` is the boundary working, not a bug.
 - Mutating commands (`create`, `update`, `delete`, `launch`, `terminate`) belong in Terraform, not in shell history; the exception is `oci session *` and one-off `oci iam` bootstrap steps documented in [iam.md](iam.md).
 - Always pass `-c` explicitly; many list commands silently default to the root compartment.
+
+## Onboarding discovery
+
+Manual procedure; no OCI report executable is installed. Confirm the expected
+profile principal and tenancy in CLI configuration without printing key/token
+contents. Validate an existing security-token session where applicable. Set `T`,
+`C`, and `REGION` from the agreed tenancy, compartment, and region, not by guessing
+from the first returned resource. Repeat only for explicitly selected scopes.
+
+```sh
+oci iam tenancy get --tenancy-id "$T" --profile ro-agent --region "$REGION" --query 'data.id'
+oci search resource structured-search --profile ro-agent --region "$REGION" --tenant-id "$T" \
+  --query-text "query all resources where compartmentId = '$C'" --limit 100 \
+  --query '{items:data.items[].{id:identifier,type:"resource-type",compartment:"compartment-id"},next:"opc-next-page"}'
+```
+
+Search only returns supported resources the principal can inspect. Follow the
+returned next-page token with `--page`; stopping early is partial coverage.
+Require inspect/read permission for the selected resource families, and separate
+read permission for Cloud Advisor recommendations. Do not grant tenancy-wide
+permissions to make a report green. `NotAuthorizedOrNotFound` is unknown.
+Use existing Cloud Advisor/Cloud Guard findings when readable; do not activate
+services. Optional [Oracle CIS assessment](landing-zone.md) requires separate
+review of its pinned script, permissions, and output; no admin escalation for
+unreadable checks. Keep selected evidence local under the shared
+[report contract](../../cloud-onboarding/references/report-format.md).
+
+Sources: [Search](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/search/resource/structured-search.html),
+[Cloud Advisor](https://docs.oracle.com/en-us/iaas/Content/CloudAdvisor/Concepts/cloudadvisoroverview.htm).

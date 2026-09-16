@@ -13,6 +13,12 @@ cd "$work/project"
 printf '\n# Keep this setting after imports.\nallowUnfree: false\n' >>devenv.yaml
 printf '\nuser skill edit\n' >>.claude/skills/aws/SKILL.md
 cp .claude/skills/aws/SKILL.md "$work/skill"
+for skill in cloud-onboarding cloud-troubleshoot; do
+  test -L ".agents/skills/$skill"
+  printf '\nlocal shared skill edit\n' >>".claude/skills/$skill/SKILL.md"
+  cp ".claude/skills/$skill/SKILL.md" "$work/$skill"
+done
+git check-ignore reports/test/report.md
 jq '.mcpServers.aws.args = ["custom-aws"]' .mcp.json >"$work/mcp.json"
 mv "$work/mcp.json" .mcp.json
 yq -o=json 'del(.imports)' devenv.yaml >"$work/settings.json"
@@ -23,6 +29,9 @@ yq -o=json 'del(.imports)' devenv.yaml >"$work/after.json"
 cmp "$work/settings.json" "$work/after.json"
 grep -q '# Keep this setting after imports.' devenv.yaml
 cmp "$work/skill" .claude/skills/aws/SKILL.md
+for skill in cloud-onboarding cloud-troubleshoot; do
+  cmp "$work/$skill" ".claude/skills/$skill/SKILL.md"
+done
 jq -e '.mcpServers.aws.args == ["custom-aws"] and has("mcpServers")' .mcp.json
 cp -R . "$work/snapshot"
 "$init" azure aws gcp --into .
@@ -75,6 +84,10 @@ for p in "${providers[@]}"; do
   "$init" "$p" --into "$work/expected/$p"
   diff -r --no-dereference -x .git "$work/expected/$p" "templates/$p"
   test ! -e "templates/$p/.git"
+  for skill in cloud-onboarding cloud-troubleshoot; do
+    test -L "templates/$p/.agents/skills/$skill"
+    cmp "$src/skills/$skill/SKILL.md" "templates/$p/.claude/skills/$skill/SKILL.md"
+  done
 done
 
 reject_regeneration() {

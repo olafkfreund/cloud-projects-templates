@@ -137,3 +137,27 @@ secret-run --only CLOUDFLARE_READ_TOKEN -- bash -c \
 ```
 
 `cf-terraforming` is not in the shell by default; see [import Cloudflare resources](https://developers.cloudflare.com/terraform/advanced-topics/import-cloudflare-resources/) for installation.
+
+## Onboarding discovery
+
+Manual procedure; no Cloudflare report executable is installed. With the read
+token, verify token status and compare `wrangler whoami` accounts to the expected
+account; token validity alone does not establish account/zone coverage. Set
+`CLOUDFLARE_ACCOUNT_ID` explicitly and enumerate only the agreed zones.
+
+Use GET `/accounts/<account-id>/security-center/insights?page=1&per_page=100`
+with the read token through the authenticated API pattern above. Check HTTP
+status and `success` before interpreting results. Select only issue ID, type,
+severity, status, and timestamp from `result.issues`; omit payload and subject.
+Follow `result.page`, `result.per_page`, and `result.count` across pages, or record
+partial coverage. Zone lists have their own `result_info` pagination. Do not
+follow remediation links or fetch extended contexts automatically.
+
+The token needs read permissions for the exact account/zone API; availability
+also depends on the account's services. Denied/unavailable insights are unknown.
+Review DNS/proxy/TLS and existing recommendations with selected read fields;
+never retrieve Worker secret values or enable services. Use the shared
+[report contract](../../cloud-onboarding/references/report-format.md).
+
+Sources: [Insights API](https://developers.cloudflare.com/api/resources/security_center/subresources/insights/methods/list/),
+[read permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/).

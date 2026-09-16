@@ -80,11 +80,11 @@ The Core Landing Zone supports up to 10 VCNs: three-tier, OKE and Exadata spokes
 - Audit logs: 365-day fixed retention; export with [Connector Hub](https://docs.oracle.com/en-us/iaas/Content/connector-hub/home.htm) to a versioned, retention-locked bucket in `security`. [Audit](https://docs.oracle.com/en-us/iaas/Content/Audit/Concepts/auditoverview.htm), [Retention](https://docs.oracle.com/en-us/iaas/Content/Audit/Tasks/settingretentionperiod.htm)
 - One log group per compartment; enable service logs for Object Storage, load balancers, functions, API gateway and VCN flow logs. [Logging](https://docs.oracle.com/en-us/iaas/Content/Logging/Concepts/loggingoverview.htm)
 - Notifications topic per environment for IAM/policy/Vault change events.
-- Run the CIS checker monthly and keep the HTML/CSV in the evidence bucket:
+- Optional CIS assessment: review and pin the Oracle script and its read permissions first. Keep reports private and local; publishing or scheduling is separate work:
 
 ```
-secret-run --only none -- true   # no secrets needed; uses the CLI profile
-python3 cis_reports.py --profile ro-agent --report-directory ./cis-out
+# Uses an existing read-only CLI profile; secret-run is not needed.
+python3 cis_reports.py --profile ro-agent --report-directory ./reports/oci-cis
 ```
 (Script: [oci-cis-landingzone-quickstart/scripts](https://github.com/oci-landing-zones/oci-cis-landingzone-quickstart); supports config-file, security-token and instance-principal auth.)
 

@@ -38,7 +38,7 @@ aws-vault clear                                    # drop cached sessions
 
 ## Output and filtering
 
-Use `--query` (JMESPath, server-side result shaping) and `--output table|text|json` ([output format](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-output-format.html), [filtering](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-filter.html), [pagination](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-pagination.html)). Prefer `--filters` (server-side) over `--query` when the API offers it: less data transferred, fewer pages.
+Use `--query` (JMESPath, client-side result shaping) and `--output table|text|json` ([output format](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-output-format.html), [filtering](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-filter.html), [pagination](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-pagination.html)). Prefer `--filters` (server-side) over `--query` when the API offers it: less data transferred, fewer pages.
 
 ```bash
 aws ec2 describe-instances --filters Name=tag:Environment,Values=prod \
@@ -149,3 +149,34 @@ aws cloudformation describe-stack-events --stack-name <s> --query 'StackEvents[?
 - Set `AWS_REGION` explicitly; do not rely on a default that differs between people.
 - Use `--profile` names that encode environment and role (`prod-ro`, `dev-deploy`) so mistakes are visible in the prompt.
 - Never pipe `get-secret-value` or `get-parameter --with-decryption` output to the terminal; pass it via `secret-run` or process substitution into the consumer.
+
+## Onboarding discovery
+
+Use the shared [cloud-onboarding skill](../../cloud-onboarding/SKILL.md) for the
+bounded automated baseline. Authenticate with an existing read-only SSO/profile,
+then pass the expected account and every requested region explicitly:
+
+```sh
+cloud-onboard-aws --account-id 123456789012 --regions eu-west-1 --environment prod --profile audit
+```
+
+Required reads: `sts:GetCallerIdentity`, `iam:GetAccountSummary`,
+`ec2:DescribeInstances`, `ec2:DescribeVolumes`, `ec2:DescribeSecurityGroups`,
+`rds:DescribeDBInstances`, `s3:ListAllMyBuckets`, `s3:GetBucketPublicAccessBlock`,
+`s3:GetBucketVersioning`, `cloudtrail:DescribeTrails`, `cloudtrail:GetTrailStatus`.
+These are a permission checklist, not a policy to attach automatically; scope
+resource-level permissions where the service supports it. Missing permission is
+reported as unknown. The command never reads S3 objects or secrets.
+
+The account-level IAM summary is collected once; inventory is limited to the
+specified regions and supported resource types. AWS CLI pagination is bounded
+by `--max-items` (default 1,000 per list); remaining tokens make coverage partial.
+The default 60-second command/900-second total limits can also yield a partial
+report. General-purpose S3 buckets only; regional filters use matching endpoints.
+Trail status outside the selected home regions remains unknown. Use native cost
+recommendations above only if already available, as a separate manual review.
+
+Sources: [IAM summary](https://docs.aws.amazon.com/cli/latest/reference/iam/get-account-summary.html),
+[S3 listing](https://docs.aws.amazon.com/cli/latest/reference/s3api/list-buckets.html),
+[bucket public-access block](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetPublicAccessBlock.html),
+[trail status](https://docs.aws.amazon.com/cli/latest/reference/cloudtrail/get-trail-status.html).

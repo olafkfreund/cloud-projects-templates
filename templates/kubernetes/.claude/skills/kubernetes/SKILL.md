@@ -77,7 +77,7 @@ The why and the sources are in [`references/well-architected.md`](references/wel
 1. Confirm context: `kubectl config current-context` and `kubens -c`. Never assume.
 2. Write the manifest, chart values or Kustomize overlay in the repo.
 3. Validate offline: `kustomize build overlays/dev | kubectl apply --dry-run=client -f -`,
-   `helm lint`, `helm template … | trivy config -`, `trivy k8s --report summary` for live clusters.
+   `helm lint`, `helm template … | trivy config -`, `trivy k8s --disable-node-collector --scanners misconfig --include-namespaces NS --report summary CONTEXT` for live clusters.
 4. Validate against the API: `kubectl apply --dry-run=server -k …` then `kubectl diff -k …`.
 5. Apply to dev, watch: `kubectl rollout status deploy/NAME`, `stern NAME`, `k9s`.
 6. Promote through environments by git (GitOps) or the same command with a different overlay.
