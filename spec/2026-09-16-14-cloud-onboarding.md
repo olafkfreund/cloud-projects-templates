@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 issue: 14
 intent: intent/2026-09-16-14-cloud-onboarding.md
 ---
