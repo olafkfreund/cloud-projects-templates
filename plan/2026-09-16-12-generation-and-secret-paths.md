@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 issue: 12
 spec: spec/2026-09-16-12-generation-and-secret-paths.md
 ---
