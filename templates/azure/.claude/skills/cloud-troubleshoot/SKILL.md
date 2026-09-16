@@ -11,7 +11,9 @@ evidence. If scope is unclear, ask for the missing target rather than scanning
 every account. Use the installed provider skill's CLI reference.
 
 If `reports/` has a baseline, check its scope, age, coverage, and tool/rule versions
-before relying on it. Absence from a partial or old baseline proves nothing.
+before relying on it. Read `schema_version`: AWS v1 uses account/regions, while
+v2 uses provider-specific scope and explicit identity strength. Attested identity
+and permission-filtered inventories retain their limits. Absence from a partial or old baseline proves nothing.
 Read the sibling `cloud-onboarding` skill for report status and privacy conventions.
 
 | Symptom | Minimal evidence |

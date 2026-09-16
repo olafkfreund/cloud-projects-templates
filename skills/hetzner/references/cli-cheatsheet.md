@@ -85,10 +85,9 @@ CCM and CSI docs: [quickstart](https://github.com/hetznercloud/hcloud-cloud-cont
 
 ## Onboarding discovery
 
-Manual procedure; no Hetzner report executable is installed. A Read token is
-project-scoped. Confirm its project association with the user's credential
-record/console and compare expected resource IDs; a successful server list alone
-cannot prove which project was intended. Use the token wrapper above:
+Use the automated `cloud-onboard-hetzner` collector first; see
+[scope, examples, permissions and coverage](onboarding.md). The commands below
+are supplementary manual investigation procedures, not additional automation.
 
 ```sh
 hcloud server list -o json | jq '[.[] | {id,status,backup_window,protection}]'

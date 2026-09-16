@@ -44,6 +44,33 @@
         };
 
       checks = forAllSystems (pkgs: {
+        onboarding-multi =
+          pkgs.runCommand "onboarding-multi"
+            {
+              nativeBuildInputs = [
+                pkgs.python3
+                pkgs.kubectl
+                pkgs.git
+              ];
+            }
+            ''
+              python3 ${./tests/onboarding_multi.py} ${self}
+              touch $out
+            '';
+        onboarding-entrypoints =
+          pkgs.runCommand "onboarding-entrypoints"
+            {
+              nativeBuildInputs = [
+                pkgs.python3
+                pkgs.just
+                pkgs.bash
+                pkgs.git
+              ];
+            }
+            ''
+              python3 ${./tests/onboarding-entrypoints.py} ${self}
+              touch $out
+            '';
         onboarding =
           pkgs.runCommand "onboarding"
             {
@@ -118,44 +145,61 @@
 
       formatter = forAllSystems (pkgs: pkgs.nixfmt);
 
-      packages = forAllSystems (pkgs: {
-        regenerate-templates = pkgs.writeShellApplication {
-          name = "regenerate-templates";
-          runtimeInputs = [
-            pkgs.coreutils
-            pkgs.git
-            pkgs.findutils
-          ];
-          runtimeEnv = {
-            CLOUD_INIT = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-            CLOUD_PROVIDERS = toString providers;
+      packages = forAllSystems (
+        pkgs:
+        (nixpkgs.lib.genAttrs (map (p: "onboard-${p}") providers) (
+          name:
+          import ./pkgs/onboarding.nix {
+            inherit pkgs;
+            provider = nixpkgs.lib.removePrefix "onboard-" name;
+          }
+        ))
+        // {
+          regenerate-templates = pkgs.writeShellApplication {
+            name = "regenerate-templates";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.git
+              pkgs.findutils
+            ];
+            runtimeEnv = {
+              CLOUD_INIT = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+              CLOUD_PROVIDERS = toString providers;
+            };
+            text = builtins.readFile ./pkgs/regenerate-templates.sh;
           };
-          text = builtins.readFile ./pkgs/regenerate-templates.sh;
-        };
-        default = pkgs.writeShellApplication {
-          name = "cloud-init";
-          runtimeInputs = with pkgs; [
-            coreutils
-            jq
-            yq-go
-            gnused
-            gnugrep
-            git
-          ];
-          runtimeEnv.SRC = "${self}";
-          text = builtins.readFile ./pkgs/init.sh;
-        };
-      });
+          default = pkgs.writeShellApplication {
+            name = "cloud-init";
+            runtimeInputs = with pkgs; [
+              coreutils
+              jq
+              yq-go
+              gnused
+              gnugrep
+              git
+            ];
+            runtimeEnv.SRC = "${self}";
+            text = builtins.readFile ./pkgs/init.sh;
+          };
+        }
+      );
 
-      apps = forAllSystems (pkgs: {
-        regenerate-templates = {
+      apps = forAllSystems (
+        pkgs:
+        (nixpkgs.lib.genAttrs (map (p: "onboard-${p}") providers) (name: {
           type = "app";
-          program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.regenerate-templates;
-        };
-        default = {
-          type = "app";
-          program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-        };
-      });
+          program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.${name};
+        }))
+        // {
+          regenerate-templates = {
+            type = "app";
+            program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.regenerate-templates;
+          };
+          default = {
+            type = "app";
+            program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          };
+        }
+      );
     };
 }

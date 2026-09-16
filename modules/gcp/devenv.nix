@@ -7,7 +7,21 @@
     ])
   ];
 
+  scripts.cloud-onboard-gcp = {
+    description = "Read-only gcp onboarding with local evidence reports";
+    exec = ''
+      cd "$DEVENV_ROOT"
+      exec ${
+        import ../../pkgs/onboarding.nix {
+          inherit pkgs;
+          provider = "gcp";
+        }
+      }/bin/cloud-onboard-gcp "$@"
+    '';
+  };
+
   enterTest = ''
+    cloud-onboard-gcp --help
     gcloud version
     gke-gcloud-auth-plugin --version
   '';

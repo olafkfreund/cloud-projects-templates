@@ -139,10 +139,9 @@ secret-run --only DIGITALOCEAN_ACCESS_TOKEN,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_
 
 ## Onboarding discovery
 
-Manual procedure; no DigitalOcean report executable is installed. Use the `doro`
-read-token helper above with `--context default` explicitly to avoid a saved
-context selecting a different token. Compare account identity with the expected
-team, and the requested project ID with `projects get` before listing resources:
+Use the automated `cloud-onboard-digitalocean` collector first; see
+[scope, examples, permissions and coverage](onboarding.md). The commands below
+are supplementary manual investigation procedures, not additional automation.
 
 ```sh
 doro account get --context default

@@ -13,14 +13,15 @@
   ];
 
   scripts.cloud-onboard-aws = {
-    description = "Read-only AWS onboarding with local evidence-based reports";
-    packages = [
-      pkgs.awscli2
-      pkgs.git
-    ];
+    description = "Read-only aws onboarding with local evidence reports";
     exec = ''
       cd "$DEVENV_ROOT"
-      exec ${pkgs.python3}/bin/python3 ${../../skills/cloud-onboarding/scripts/aws_report.py} "$@"
+      exec ${
+        import ../../pkgs/onboarding.nix {
+          inherit pkgs;
+          provider = "aws";
+        }
+      }/bin/cloud-onboard-aws "$@"
     '';
   };
 

@@ -212,11 +212,9 @@ az deployment group delete -g <rg> -n <name>     # removes history only, not res
 
 ## Onboarding discovery
 
-Manual procedure; there is no Azure report executable yet. Follow the shared
-[report contract](../../cloud-onboarding/references/report-format.md). Compare
-`az account show --subscription "$SUB"` tenant/subscription/user with the expected
-scope before reading resources. Reader access is needed on each intended scope;
-Resource Graph can silently omit inaccessible subscriptions/resources.
+Use the automated `cloud-onboard-azure` collector first; see
+[scope, examples, permissions and coverage](onboarding.md). The commands below
+are supplementary manual investigation procedures, not additional automation.
 
 ```sh
 az account show --subscription "$SUB" --query '{subscription:id,tenant:tenantId}'

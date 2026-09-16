@@ -40,7 +40,22 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || git init -q
 
 copy() { cp -rn --no-preserve=mode "$@"; } # never overwrite, make store copies writable
 
-[ -f devenv.yaml ] || copy "$SRC/templates/base/." .
+# Do not shadow an existing differently named just task file during adoption.
+has_just=false
+for task_file in justfile Justfile .justfile; do
+  if [ -e "$task_file" ] || [ -L "$task_file" ]; then has_just=true; fi
+done
+if [ ! -f devenv.yaml ]; then
+  for base_file in "$SRC/templates/base/"* "$SRC/templates/base/".[!.]*; do
+    [ -e "$base_file" ] || continue
+    [ "${base_file##*/}" != justfile ] || [ "$has_just" = false ] || continue
+    copy "$base_file" .
+  done
+fi
+[ -e cloud-onboarding.just ] || [ -L cloud-onboarding.just ] || copy "$SRC/templates/base/cloud-onboarding.just" .
+if [ "$has_just" = false ] && [ ! -e justfile ] && [ ! -L justfile ]; then
+  copy "$SRC/templates/base/justfile" .
+fi
 
 for p in "${selected[@]}"; do
   if ! yq -o=json '.imports' devenv.yaml | jq -e --arg import "cloud/modules/$p" 'index($import) != null' >/dev/null; then

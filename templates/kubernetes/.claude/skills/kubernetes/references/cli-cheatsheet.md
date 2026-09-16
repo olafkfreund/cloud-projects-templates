@@ -167,8 +167,9 @@ kubectl patch cronjob NAME -n NS -p '{"spec":{"suspend":true}}'   # pause; commi
 
 ## Onboarding discovery
 
-Manual procedure; there is no Kubernetes report executable. Verify the expected
-context and API identity first, then restrict reads to agreed namespaces:
+Use the automated `cloud-onboard-kubernetes` collector first; see
+[scope, examples, permissions and coverage](onboarding.md). The commands below
+are supplementary manual investigation procedures, not additional automation.
 
 ```sh
 kubectl --context "$CONTEXT" auth whoami

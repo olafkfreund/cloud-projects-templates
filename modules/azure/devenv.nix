@@ -13,7 +13,21 @@
     azure-mcp
   ];
 
+  scripts.cloud-onboard-azure = {
+    description = "Read-only azure onboarding with local evidence reports";
+    exec = ''
+      cd "$DEVENV_ROOT"
+      exec ${
+        import ../../pkgs/onboarding.nix {
+          inherit pkgs;
+          provider = "azure";
+        }
+      }/bin/cloud-onboard-azure "$@"
+    '';
+  };
+
   enterTest = ''
+    cloud-onboard-azure --help
     az version
     az graph query --help >/dev/null
     bicep --version

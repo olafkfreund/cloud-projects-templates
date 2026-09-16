@@ -23,6 +23,7 @@ let
 in
 {
   packages = with pkgs; [
+    just
     terraform
     tflint
     trivy
@@ -143,6 +144,7 @@ in
   '';
 
   enterTest = ''
+    just --version
     [ -z "''${PYTHONPATH:-}" ] || { echo "PYTHONPATH leaks into the shell and breaks uvx MCP servers" >&2; exit 1; }
     terraform version
     tflint --version
