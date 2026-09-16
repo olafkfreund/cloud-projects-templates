@@ -22,7 +22,11 @@ def collect(r, a):
         "config.view",
         a.context,
         lambda: kube(
-            "config", "view", "--minify", "-o", "jsonpath={.clusters[0].cluster}"
+            "config",
+            "view",
+            "--minify",
+            "-o",
+            'go-template={{$c := (index .clusters 0).cluster}}{"server":{{printf "%q" $c.server}},"insecure-skip-tls-verify":{{if index $c "insecure-skip-tls-verify"}}true{{else}}false{{end}}}',
         ),
     )
     if (

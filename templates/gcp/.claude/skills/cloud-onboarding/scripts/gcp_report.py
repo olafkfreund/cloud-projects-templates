@@ -101,6 +101,10 @@ def collect(r, a):
         for x, eid in rows:
             name = x.get("name")
             attrs = {"location": x.get("location") or x.get("zone") or x.get("region")}
+            if kind == "asset":
+                attrs["asset_type"] = (
+                    x.get("assetType") if isinstance(x.get("assetType"), str) else None
+                )
             if kind == "instance":
                 attrs["disks"] = [
                     d.get("source")
@@ -126,7 +130,12 @@ def collect(r, a):
                         },
                     )
                 )
-            rid = r.resource(name, kind, scope, attrs, eid)
+            native_id = (
+                x.get("id") if kind in ("instance", "disk", "firewall") else name
+            )
+            if kind in ("instance", "disk", "firewall"):
+                attrs["name"] = name if isinstance(name, str) else None
+            rid = r.resource(native_id, kind, scope, attrs, eid)
             if kind == "firewall":
                 rules = None
                 if isinstance(x.get("allowed"), list):

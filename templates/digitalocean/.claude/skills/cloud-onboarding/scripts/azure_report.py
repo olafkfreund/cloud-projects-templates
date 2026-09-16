@@ -68,13 +68,16 @@ def collect(r, a):
             argv += ["--skip-token", token]
         data = r.cli(argv)
         if isinstance(data, dict) and not (
-            data.get("skip_token") or data.get("$skipToken")
+            data.get("skipToken") or data.get("skip_token") or data.get("$skipToken")
         ):
-            if str(data.get("result_truncated", "false")).lower() == "true" or (
+            if str(
+                data.get("resultTruncated", data.get("result_truncated", "false"))
+            ).lower() == "true" or (
                 token is None
-                and type(data.get("total_records")) is int
+                and type(data.get("totalRecords", data.get("total_records"))) is int
                 and isinstance(data.get("data"), list)
-                and data["total_records"] > len(data["data"])
+                and data.get("totalRecords", data.get("total_records"))
+                > len(data["data"])
             ):
                 raise Failure("truncated")
         return data
@@ -84,7 +87,9 @@ def collect(r, a):
         scope,
         graph,
         lambda d: d["data"],
-        lambda d: d.get("skip_token") or d.get("$skipToken") or None,
+        lambda d: (
+            d.get("skipToken") or d.get("skip_token") or d.get("$skipToken") or None
+        ),
     )
     r.limitations.append(
         "Resource Graph is indexed and permission-filtered; complete queries do not prove subscription-wide visibility."

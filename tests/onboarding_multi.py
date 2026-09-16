@@ -252,6 +252,19 @@ def check_providers():
                     "versioning_enabled": False,
                 }
             ]
+        if argv[:3] == ["gcloud", "compute", "instances"]:
+            return [
+                {"id": "1", "name": "same-name", "zone": "zone-a"},
+                {"id": "2", "name": "same-name", "zone": "zone-b"},
+            ]
+        if argv[:3] == ["gcloud", "asset", "search-all-resources"]:
+            return [
+                {
+                    "name": "//compute.googleapis.com/projects/proj/zones/z/instances/i",
+                    "assetType": "compute.googleapis.com/Instance",
+                    "location": "z",
+                }
+            ]
         if argv[0] == "gcloud":
             return []
         if argv[0] == "kubectl":
@@ -305,6 +318,7 @@ def check_providers():
                 },
             }
         if origin == "https://api.hetzner.cloud":
+            assert "per_page=50" in path
             kind = path.split("/")[2].split("?")[0]
             return {
                 kind: [
@@ -357,6 +371,12 @@ def check_providers():
             module.collect(report, args)
         assert report.identity["status"] in ("verified", "attested"), provider
         assert report.operations and report.findings, provider
+        if provider == "gcp":
+            assert len([x for x in report.resources if x["type"] == "instance"]) == 2
+            assert any(
+                x["attributes"].get("asset_type") == "compute.googleapis.com/Instance"
+                for x in report.resources
+            )
         assert "SYNTHETIC_SECRET" not in json.dumps(
             [report.evidence, report.resources, report.findings]
         ), provider
@@ -422,6 +442,105 @@ def check_providers():
         ):
             oci_report.collect(report, args)
         assert any(f["status"] == "fail" for f in report.findings)
+    import azure_report, digitalocean_report, cloudflare_report
+
+    # Azure CLI uses camelCase continuation metadata, not Python model names.
+    args = SimpleNamespace(**base, **cases["azure"])
+    report = c.Report("azure", args, {}, azure_report.SOURCE, [])
+    graph_pages = []
+
+    def paged_azure(argv):
+        if argv[:3] == ["az", "graph", "query"]:
+            page = 2 if "--skip-token" in argv else 1
+            graph_pages.append(page)
+            data = {
+                "data": [
+                    {
+                        "id": "/subscriptions/sub/resourceGroups/rg/providers/Example/item/"
+                        + str(page),
+                        "type": "Example/item",
+                    }
+                ],
+                "totalRecords": 2,
+                "resultTruncated": "false",
+            }
+            if page == 1:
+                data.update(skipToken="next", resultTruncated="true")
+            return data
+        return cli(argv)
+
+    with patch.object(report, "cli", side_effect=paged_azure):
+        azure_report.collect(report, args)
+    assert graph_pages == [1, 2] and len(report.resources) == 2
+    assert all(op["status"] == "complete" for op in report.operations)
+    # Missing firewall evidence must not become a conclusive pass or fail.
+    for missing in ("sources", "ports"):
+        args = SimpleNamespace(**base, **cases["digitalocean"])
+        report = c.Report("digitalocean", args, {}, digitalocean_report.SOURCE, [])
+
+        def incomplete_firewall(origin, path, token):
+            data = http(origin, path, token)
+            if "firewalls" in data:
+                del data["firewalls"][0]["inbound_rules"][0][missing]
+            return data
+
+        with (
+            patch.dict(os.environ, env),
+            patch.object(report, "http", side_effect=incomplete_firewall),
+        ):
+            digitalocean_report.collect(report, args)
+        assert (
+            next(
+                f
+                for f in report.findings
+                if f["rule_id"] == "digitalocean.administrative-ingress"
+            )["status"]
+            == "unknown"
+        )
+        assert any(
+            f["rule_id"] == "digitalocean.project-ownership"
+            and f["status"] == "unknown"
+            for f in report.findings
+        )
+    # The current Cloudflare OpenAPI nests Insights pagination in result.
+    args = SimpleNamespace(
+        **dict(base, include_recommendations=True), **cases["cloudflare"]
+    )
+    report = c.Report("cloudflare", args, {}, cloudflare_report.SOURCE, [])
+    insight_pages = []
+
+    def insights(origin, path, token):
+        if "/security-center/insights?" in path:
+            from urllib.parse import parse_qs, urlsplit
+
+            page = int(parse_qs(urlsplit(path).query)["page"][0])
+            insight_pages.append(page)
+            return {
+                "success": True,
+                "result": {
+                    "page": page,
+                    "per_page": 1,
+                    "count": 2,
+                    "issues": [
+                        {
+                            "id": "issue-" + str(page),
+                            "payload": {"secret": "DO_NOT_PERSIST"},
+                        }
+                    ],
+                },
+            }
+        return http(origin, path, token)
+
+    with (
+        patch.dict(os.environ, env),
+        patch.object(report, "http", side_effect=insights),
+    ):
+        cloudflare_report.collect(report, args)
+    assert insight_pages == [1, 2]
+    assert (
+        sum(f["rule_id"] == "cloudflare.native-insight" for f in report.findings) == 2
+    )
+    assert "DO_NOT_PERSIST" not in json.dumps(report.evidence)
     # A denied OCI regional read must not become observed regional coverage.
     with tempfile.TemporaryDirectory() as temp:
         config = Path(temp) / "config"
@@ -449,6 +568,10 @@ def check_providers():
         ):
             oci_report.collect(report, args)
         assert report.observed["regions"] == []
+        assert any(
+            op["operation"] == "os.bucket.list" and op["status"] == "not_collected"
+            for op in report.operations
+        )
     import hetzner_report
 
     args = SimpleNamespace(**base, **cases["hetzner"])
@@ -546,6 +669,40 @@ def check_kube_render():
 
     with patch.object(r, "cli", side_effect=fake):
         k.collect(r, args)
+    config_command = next(command for command in commands if "config" in command)
+    with tempfile.TemporaryDirectory() as temp:
+        config_file = Path(temp) / "config"
+        config_file.write_text(
+            json.dumps(
+                {
+                    "apiVersion": "v1",
+                    "kind": "Config",
+                    "clusters": [
+                        {"name": "test", "cluster": {"server": args.expected_server}}
+                    ],
+                    "contexts": [
+                        {
+                            "name": "test",
+                            "context": {"cluster": "test", "user": "reader"},
+                        }
+                    ],
+                    "current-context": "test",
+                    "users": [{"name": "reader", "user": {"token": "DO_NOT_PERSIST"}}],
+                }
+            )
+        )
+        result = subprocess.run(
+            [*config_command, "--kubeconfig", str(config_file)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stderr
+        identity = json.loads(result.stdout)
+        assert identity == {
+            "server": args.expected_server,
+            "insecure-skip-tls-verify": False,
+        }
+        assert "DO_NOT_PERSIST" not in result.stdout
     template = next(
         a
         for command in commands

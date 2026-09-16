@@ -243,6 +243,8 @@ def collect(r, a):
                     if ns is not None
                     else r.operations[int(ne[1:]) - 1]["status"],
                 )
+                _, missing = r.read("os.bucket.list", scope, lambda: None)
+                r.mark(missing, "not_collected")
                 continue
             for x, eid in listing(
                 "os.bucket.list",

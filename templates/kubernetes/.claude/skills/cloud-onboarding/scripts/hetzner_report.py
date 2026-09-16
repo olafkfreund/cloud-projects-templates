@@ -57,7 +57,7 @@ def collect(r, a):
             kind + ".list",
             a.project_label,
             lambda page: get(
-                "/" + kind + "?" + urlencode({"page": page or 1, "per_page": 100})
+                "/" + kind + "?" + urlencode({"page": page or 1, "per_page": 50})
             ),
             lambda d: d[kind],
             next_page,

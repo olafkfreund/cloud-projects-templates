@@ -38,10 +38,27 @@ def collect(r, a):
         eid,
         lambda d: (
             obj(d.get("project")).get("id") == a.project_id
-            and obj(d.get("project")).get("owner_uuid", a.account_uuid) in owner_ids
+            and (
+                obj(d.get("project")).get("owner_uuid") is None
+                or obj(d.get("project")).get("owner_uuid") in owner_ids
+            )
         ),
         lambda d: {"project_id": d["project"]["id"]},
     )
+    if obj(data.get("project")).get("owner_uuid") is None:
+        r.limitations.append(
+            "Project ownership metadata unavailable; only returned account/project IDs were verified."
+        )
+        r.finding(
+            "project-ownership",
+            a.project_id,
+            "unknown",
+            eid,
+            "The API did not return project ownership metadata.",
+            "Confirm ownership separately.",
+        )
+    else:
+        r.observe(eid, {"owner_uuid": data["project"]["owner_uuid"]})
     r.limitations.append(
         "Project lists silently omit resource families lacking token read scopes. Account UUID does not independently verify team identity."
     )
@@ -157,8 +174,10 @@ def collect(r, a):
                         {
                             "active": True,
                             "protocol": v.get("protocol"),
-                            "sources": obj(v.get("sources")).get("addresses", []),
-                            "ports": [v.get("ports")],
+                            "sources": obj(v.get("sources")).get("addresses"),
+                            "ports": [v["ports"]]
+                            if v.get("ports") is not None
+                            else None,
                         }
                         for v in fw["inbound_rules"]
                         if isinstance(v, dict)
