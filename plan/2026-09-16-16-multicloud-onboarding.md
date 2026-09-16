@@ -581,3 +581,22 @@ Exact CLI flags, JSON projections,
 API read actions and optional-service permission names must be checked against
 the pinned tool versions before the implementation plan's verification commands
 are finalized. No undocumented identity endpoint or cloud behavior is assumed.
+
+## Implementation refinements
+
+- Shared v2 reporting reuses `now`, Markdown escaping and private Git/output
+  preflight from the unchanged AWS script rather than moving these helpers out
+  and changing AWS imports. The complete scripts directory is packaged together;
+  this preserves AWS v1 byte-for-byte source behavior and avoids an unnecessary
+  extraction risk. There is still only one implementation of these protections.
+- The pinned just supports `[script("bash")]`; use that explicit interpreter
+  instead of a filesystem shebang, which fails in the Nix sandbox. The literal
+  argument/exit-code suite runs both locally and in the sandbox.
+- The 1000-attempt bound counts collector HTTP requests and CLI invocations.
+  Native CLI internal pagination/retry requests are not observable individually;
+  those remain bounded by list limits where supported, response bytes and process
+  deadlines. Reports/documentation must not describe this as an exact global
+  count of provider HTTP requests. No cloud scope is expanded by this refinement.
+- Hetzner label-selector associations are reported unknown for manual review in
+  this release, rather than implementing a partial selector evaluator that could
+  incorrectly prove attachment. Explicit server firewall IDs are retained.

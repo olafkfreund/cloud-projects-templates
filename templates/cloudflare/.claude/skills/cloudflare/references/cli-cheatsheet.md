@@ -140,10 +140,9 @@ secret-run --only CLOUDFLARE_READ_TOKEN -- bash -c \
 
 ## Onboarding discovery
 
-Manual procedure; no Cloudflare report executable is installed. With the read
-token, verify token status and compare `wrangler whoami` accounts to the expected
-account; token validity alone does not establish account/zone coverage. Set
-`CLOUDFLARE_ACCOUNT_ID` explicitly and enumerate only the agreed zones.
+Use the automated `cloud-onboard-cloudflare` collector first; see
+[scope, examples, permissions and coverage](onboarding.md). The commands below
+are supplementary manual investigation procedures, not additional automation.
 
 Use GET `/accounts/<account-id>/security-center/insights?page=1&per_page=100`
 with the read token through the authenticated API pattern above. Check HTTP

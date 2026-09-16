@@ -179,9 +179,9 @@ gets echoed or written to a file.
 
 ## Onboarding discovery
 
-Manual procedure; no GCP report executable is installed. Check active identity
-with `gcloud auth list --filter=status:ACTIVE --format='value(account)'`, including
-any configured service-account impersonation, and verify the expected project:
+Use the automated `cloud-onboard-gcp` collector first; see
+[scope, examples, permissions and coverage](onboarding.md). The commands below
+are supplementary manual investigation procedures, not additional automation.
 
 ```sh
 gcloud projects describe "$PROJECT_ID" --format='json(projectId,projectNumber)'

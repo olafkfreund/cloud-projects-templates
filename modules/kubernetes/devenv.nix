@@ -10,7 +10,21 @@
     stern
   ];
 
+  scripts.cloud-onboard-kubernetes = {
+    description = "Read-only kubernetes onboarding with local evidence reports";
+    exec = ''
+      cd "$DEVENV_ROOT"
+      exec ${
+        import ../../pkgs/onboarding.nix {
+          inherit pkgs;
+          provider = "kubernetes";
+        }
+      }/bin/cloud-onboard-kubernetes "$@"
+    '';
+  };
+
   enterTest = ''
+    cloud-onboard-kubernetes --help
     kubectl version --client
     helm version
     k9s version --short

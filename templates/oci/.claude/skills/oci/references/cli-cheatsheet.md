@@ -127,11 +127,9 @@ oci search resource structured-search --query-text "query all resources where (d
 
 ## Onboarding discovery
 
-Manual procedure; no OCI report executable is installed. Confirm the expected
-profile principal and tenancy in CLI configuration without printing key/token
-contents. Validate an existing security-token session where applicable. Set `T`,
-`C`, and `REGION` from the agreed tenancy, compartment, and region, not by guessing
-from the first returned resource. Repeat only for explicitly selected scopes.
+Use the automated `cloud-onboard-oci` collector first; see
+[scope, examples, permissions and coverage](onboarding.md). The commands below
+are supplementary manual investigation procedures, not additional automation.
 
 ```sh
 oci iam tenancy get --tenancy-id "$T" --profile ro-agent --region "$REGION" --query 'data.id'

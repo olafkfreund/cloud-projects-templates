@@ -33,7 +33,7 @@ Running `nix run … -- <provider>` again in a generated project adds that provi
 
 | | Every project | aws | azure | gcp | oci | kubernetes |
 |---|---|---|---|---|---|---|
-| Tools | terraform, tflint, trivy, terraform-docs, infracost, jq, yq, age (agenix-format secrets) | awscli2, aws-vault, ssm plugin, cfn-lint, eksctl, Python, cloud-onboard-aws | az (+aks-preview, resource-graph), bicep, kubelogin | gcloud (+gke auth plugin) | oci-cli | kubectl, helm, k9s, kustomize, kubectx, stern |
+| Tools | just, terraform, tflint, trivy, terraform-docs, infracost, jq, yq, age (agenix-format secrets) | awscli2, aws-vault, ssm plugin, cfn-lint, eksctl, Python, cloud-onboard-aws | az (+aks-preview, resource-graph), bicep, kubelogin | gcloud (+gke auth plugin) | oci-cli | kubectl, helm, k9s, kustomize, kubectx, stern |
 | MCP servers (read-only) | terraform (registry) | aws-api, aws-docs | azure | gcloud (allowlist) | oci | kubernetes |
 | Skills | `terraform`, `secrets`, `cloud-onboarding`, `cloud-troubleshoot` | `aws` | `azure` | `gcp` | `oci` | `kubernetes` |
 
@@ -47,6 +47,7 @@ Files in a generated project:
 
 ```
 devenv.yaml devenv.nix devenv.lock .envrc .gitignore
+justfile cloud-onboarding.just
 AGENTS.md CLAUDE.md .mcp.json .mcp/
 .claude/skills/<skill>/     # read by Claude Code, Cursor, opencode, Copilot
 .agents/skills/<skill>  →   # symlink, read by Codex, Gemini CLI
@@ -58,8 +59,16 @@ Pre-commit hooks run `terraform fmt`, `tflint`, `detect-private-keys`, `shellche
 ## Cloud onboarding and reports
 
 Every project includes shared onboarding and troubleshooting skills. AWS has an
-automated, read-only baseline command; Azure, GCP, OCI, Kubernetes, Cloudflare,
-Hetzner and DigitalOcean have manual discovery/reporting procedures.
+automated, read-only baseline command, as do Azure, GCP, OCI, Kubernetes,
+Cloudflare, Hetzner and DigitalOcean. Each has explicitly bounded coverage.
+See the [command guide](skills/cloud-onboarding/references/commands.md) for
+provider examples, required identity arguments and existing-project adoption.
+
+Use `cloud-onboard-<provider>` inside `devenv shell` or direnv,
+`just onboard <provider> ...` in the same environment, or
+`nix run github:olafkfreund/cloud-projects-templates#onboard-<provider> -- ...`
+from a Git project root. Shell activation never scans. `just --list` discovers
+the recipe; all commands support credential-free `--help`.
 
 Inside an AWS project's shell, from its Git root:
 
@@ -88,7 +97,8 @@ report was written; **1**: invalid input, identity failure, or report failure.
 Defaults are 1,000 items per paginated list, 60 seconds per command, 900 seconds
 total. `--max-items`, `--command-timeout`, and `--timeout` adjust these bounds.
 Backups need restore evidence; architecture, IAM, resilience and cost require
-manual review. Baseline comparison and additional automated providers are deferred.
+manual review. Automated baseline comparison is deferred. AWS reports retain schema v1; the
+other seven use v2 with provider-specific scope and explicit identity strength.
 
 Use `cloud-troubleshoot` for a specific symptom. It relates current evidence to a
 suitable baseline and reports likely causes and missing evidence, without
@@ -99,7 +109,7 @@ restarting resources, creating debug workloads, or changing permissions.
 | Task | Available now |
 |---|---|
 | Establish an AWS baseline | Run `cloud-onboard-aws` for one account and explicit regions; get inventory, checks, evidence and coverage reports. |
-| Discover another provider | Ask an agent to use `cloud-onboarding` and the provider procedure. Collection and report assembly are guided; there is no equivalent automated command yet. |
+| Discover another provider | Run `cloud-onboard-<provider>` with its explicit scope. Each produces inventory, bounded checks and coverage; an agent can interpret the report. |
 | Assess configuration gaps | AWS checks include root MFA/keys, open SSH/RDP security-group rules, encryption, RDS backup retention/public access, S3 protection/versioning, CloudTrail logging and required tags. Workload-dependent decisions remain manual. |
 | Investigate a problem | Ask an agent to use `cloud-troubleshoot` with a symptom, scope, time window and an existing baseline if available. It gathers evidence and distinguishes likely causes from unverified hypotheses. |
 | Prepare fixes | Use the provider and Terraform skills to turn reviewed findings into proposed IaC changes. Onboarding itself does not apply fixes. |
@@ -140,7 +150,7 @@ project so it can read the installed skills.
 > summarize coverage gaps, and prioritize findings with their evidence.
 
 > Use cloud-onboarding for Azure tenant <tenant-id> and subscription
-> <subscription-id>. Follow the manual Azure discovery procedure, create a local
+> <subscription-id>. Run the Azure collector, create a local
 > report, and distinguish missing configuration from unavailable evidence.
 
 > Use cloud-troubleshoot to investigate <symptom> in <account/project/cluster>
@@ -192,6 +202,10 @@ Add them to `packages` in your project's `devenv.nix`:
 ## Updates
 
 Projects import the modules from this repo at the revision pinned in `devenv.lock`. Run `devenv update` to pick up new tools and fixes.
+
+Copied skills and just recipes do not update with that lockfile. Existing task
+files are preserved; review importing `cloud-onboarding.just` or run
+`just --justfile cloud-onboarding.just onboard <provider> ...`.
 
 Copied skills do not update with that lockfile. Re-run the generator to add
 missing shared skills, preserving local edits and MCP overrides. For existing

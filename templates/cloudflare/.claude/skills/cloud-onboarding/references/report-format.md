@@ -1,4 +1,4 @@
-# Report format, version 1
+# Report formats: AWS v1 and multi-provider v2
 
 Store a run in `reports/<environment>/<UTC timestamp with unique suffix>/`:
 `report.md`, `inventory.json`, `findings.json`, `coverage.json`. Require an explicit
@@ -6,7 +6,7 @@ scope; do not claim complete account inventory. Directories are 0700 and files
 0600. Keep `/reports/` Git-ignored, do not overwrite old runs, and do not follow
 output symlinks. Never save raw command output, continuation tokens or errors.
 
-All JSON files have `schema_version: 1` and identical `run` metadata:
+AWS JSON files have `schema_version: 1` and identical `run` metadata:
 `id`, `started_at`, `ended_at`, `provider`, `expected_account`, `observed_account`,
 `regions`, `environment`, `collector_version`, `ruleset_version`, `cli_version`.
 Timestamps are UTC ISO-8601. A manual report identifies its CLI versions and manual
@@ -71,3 +71,28 @@ is not implemented in version 1.
 Control interpretation follows the
 [AWS Well-Architected review process](https://docs.aws.amazon.com/wellarchitected/latest/framework/the-review-process.html):
 configuration evidence cannot replace workload and operational context.
+
+## Version 2: the seven additional providers
+
+AWS retains version 1 for compatibility. New collectors emit `schema_version: 2`
+with the same four files and resource/evidence/finding shapes. Run metadata has
+`id`, `started_at`, `ended_at`, `provider`, `environment`, `collector_version`,
+`ruleset_version`, `tool_versions`, `requested_scope`, `observed_scope`, and
+`identity` (status, method, evidence references). Provider-specific scope fields
+represent subscriptions, compartments, namespaces or zones accurately.
+
+Identity is `verified`, `attested` or `corroborated`. Hetzner project association
+is user-attested; a known server can corroborate access, not verify a project ID.
+Observed scope is derived from successful reads, with that exception labeled.
+Failed required identity prevents inventory. Reports retain visibility limits
+and unknown freshness even when all supported operations complete.
+
+Evidence observations contain selected resource attributes and selected detail
+records. Coverage includes `visibility_limitations`, per-operation `observed_at`
+and freshness. New error categories include request/response limits and unsafe
+pagination. They mean incomplete evidence, never an absent resource.
+
+Native Azure Advisor/Cloudflare Insights require `--include-recommendations`;
+findings remain manual review. Other native recommendation services are not yet
+collected. Always inspect `schema_version` before processing report metadata.
+Older AWS reports remain usable; no automatic schema conversion or diff exists.

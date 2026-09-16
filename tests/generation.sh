@@ -65,6 +65,23 @@ for invalid in \
   rm -r "$work/before-invalid"
 done
 
+# Existing task files, including alternate names and dangling symlinks, survive adoption.
+for task_name in justfile Justfile .justfile; do
+  task_project="$work/task-$task_name"
+  "$init" aws --into "$task_project"
+  rm "$task_project/justfile" "$task_project/cloud-onboarding.just"
+  printf 'custom task file\n' >"$task_project/$task_name"
+  "$init" aws --into "$task_project"
+  grep -qx 'custom task file' "$task_project/$task_name"
+  test -f "$task_project/cloud-onboarding.just"
+  if [ "$task_name" != justfile ]; then test ! -e "$task_project/justfile"; fi
+  rm "$task_project/$task_name"
+  ln -s missing-target "$task_project/$task_name"
+  "$init" aws --into "$task_project"
+  test -L "$task_project/$task_name"
+  test ! -e "$task_project/missing-target"
+done
+
 mkdir -p "$work/checkout/pkgs" "$work/checkout/templates"
 cp "$src/flake.nix" "$work/checkout/"
 cp "$src/pkgs/init.sh" "$work/checkout/pkgs/"

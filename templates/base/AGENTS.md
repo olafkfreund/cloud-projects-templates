@@ -35,7 +35,7 @@ Cloud infrastructure project. It uses [devenv](https://devenv.sh) and was genera
 
 ## Onboarding and troubleshooting
 
-- Use `.claude/skills/cloud-onboarding` for scoped discovery and evidence-based reports. AWS has `cloud-onboard-aws`; other providers have manual procedures.
+- Use `.claude/skills/cloud-onboarding` for scoped discovery and evidence-based reports. Each selected provider has `cloud-onboard-<provider>` and `just onboard <provider> --help`. Entering the shell never scans automatically.
 - Verify the expected identity and scope first. Denied reads and incomplete collection are unknown, never proof that a control passes or a resource is missing.
 - Keep `reports/` private and Git-ignored. Do not publish inventories or collect secrets, unrestricted logs, or workload payloads.
 - Use `.claude/skills/cloud-troubleshoot` for a named symptom. Diagnosis does not authorize remediation, collector jobs, or workload execution.
