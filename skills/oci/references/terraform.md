@@ -24,7 +24,7 @@ provider "oci" {
 - Humans: `auth = "SecurityToken"` with the profile created by `oci session authenticate`. Tokens expire after 1 hour, so Oracle advises against them for long provisioning runs; split big stacks or use a principal. [Configuring the provider](https://docs.oracle.com/en-us/iaas/Content/dev/terraform/configuring.htm)
 - OCI-hosted CI: `auth = "InstancePrincipal"`; no config file needed. Dynamic group + policy in [iam.md](iam.md).
 - Env-var equivalents: `TF_VAR_auth`/`OCI_AUTH`, `TF_VAR_config_file_profile`/`OCI_CONFIG_FILE_PROFILE`, `TF_VAR_region`/`OCI_REGION`. Precedence: env vars > named profile > DEFAULT profile.
-- API keys: only via agenix. `secret-run --only oci-key -- terraform plan` with `TF_VAR_private_key_path` pointing at the injected file; never `private_key = "..."` in HCL.
+- API keys: encrypted with agenix (`OCI_PRIVATE_KEY`) and supplied through a separately managed private runtime key-file path referenced by the profile/provider. `secret-run` injects environment values, not files; it does not create `TF_VAR_private_key_path`. Prefer security-token/principal authentication; never embed a key in HCL.
 - State contains secrets (DB admin passwords, generated keys) regardless of `sensitive = true`. Treat the state bucket as a secret store. [Storing sensitive data](https://docs.oracle.com/en-us/iaas/Content/dev/terraform/storing-sensitive-data.htm)
 
 ## Remote state: native `oci` backend

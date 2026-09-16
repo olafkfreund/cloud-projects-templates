@@ -54,7 +54,7 @@ Hetzner exposes no audit-log API. What you have:
 
 - The console's activity history per project (manual, per project).
 - `hcloud` and Terraform run in CI with logs retained; every apply is a PR with the plan attached.
-- Snapshots of `hcloud all list -o json` (see [cli-cheatsheet.md](cli-cheatsheet.md)) committed to an inventory repo on a schedule, diffed for drift.
+- Selected-field inventory reports (see [cli-cheatsheet.md](cli-cheatsheet.md)) kept private and Git-ignored. Review metadata sensitivity before sharing; do not commit unrestricted snapshots.
 - `terraform plan` on a schedule with the Read token; a non-empty plan is drift, alert on it.
 
 Quarterly review: list tokens and S3 keys per project, confirm each maps to a live consumer in `tokens.md`, delete the rest; list `hcloud ssh-key list` and remove keys of departed people; check firewalls for widened rules.

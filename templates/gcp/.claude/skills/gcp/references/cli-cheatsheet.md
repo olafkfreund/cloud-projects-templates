@@ -176,3 +176,28 @@ gets echoed or written to a file.
 - Pin `--project`, `--region`/`--zone` explicitly in scripts.
 - `gcloud topic startup` and `CLOUDSDK_CORE_DISABLE_PROMPTS=1` for
   non-interactive runs ([startup](https://docs.cloud.google.com/sdk/gcloud/reference/topic/startup)).
+
+## Onboarding discovery
+
+Manual procedure; no GCP report executable is installed. Check active identity
+with `gcloud auth list --filter=status:ACTIVE --format='value(account)'`, including
+any configured service-account impersonation, and verify the expected project:
+
+```sh
+gcloud projects describe "$PROJECT_ID" --format='json(projectId,projectNumber)'
+gcloud asset search-all-resources --scope="projects/$PROJECT_ID" --project="$PROJECT_ID" \
+  --read-mask=name,assetType,location --format='json(name,assetType,location)' --page-size=100
+```
+
+Use the CLI: the project's GCP MCP allowlist does not expose asset discovery.
+`cloudasset.assets.searchAllResources` is required on the intended scope. The CLI
+follows pages; adding `--limit` bounds the results and must be recorded as possible
+truncation. Only supported searchable asset types appear. A disabled Cloud Asset
+API or denied scope is unknown; do not enable APIs or widen roles automatically.
+Review existing Recommender/Security Command Center findings only when accessible;
+not every activation has the same detectors. Select evidence fields and use the
+shared [report contract](../../cloud-onboarding/references/report-format.md).
+
+Sources: [asset search](https://docs.cloud.google.com/sdk/gcloud/reference/asset/search-all-resources),
+[asset coverage](https://docs.cloud.google.com/asset-inventory/docs/asset-inventory-overview),
+[Security Health Analytics availability](https://docs.cloud.google.com/security-command-center/docs/concepts-security-health-analytics).

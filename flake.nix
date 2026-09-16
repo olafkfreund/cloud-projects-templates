@@ -44,6 +44,18 @@
         };
 
       checks = forAllSystems (pkgs: {
+        onboarding =
+          pkgs.runCommand "onboarding"
+            {
+              nativeBuildInputs = [
+                pkgs.python3
+                pkgs.git
+              ];
+            }
+            ''
+              python3 ${./tests/onboarding.py} ${self}
+              touch $out
+            '';
         mcp-config =
           pkgs.runCommand "mcp-config"
             {

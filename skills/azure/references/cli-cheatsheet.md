@@ -39,11 +39,11 @@ and prefer the federated-token form above whenever possible.
 
 Source: [Extensions overview](https://learn.microsoft.com/en-us/cli/azure/azure-cli-extensions-overview),
 [available extensions](https://learn.microsoft.com/en-us/cli/azure/azure-cli-extensions-list).
-`aks-preview` is built into this shell's `az`. Core `az containerapp` commands work without the `containerapp` extension, which is omitted until its nixpkgs build is fixed.
+`aks-preview` and `resource-graph` are built into this shell's `az`. Core `az containerapp` commands work without the `containerapp` extension, which is omitted until its nixpkgs build is fixed.
 
 ```bash
 az extension list -o table
-az config set extension.use_dynamic_install=yes_without_prompt   # auto-install missing ones
+az graph query --help   # resource-graph is declared in the project module
 ```
 
 ## Discover and query
@@ -209,3 +209,30 @@ az storage account update -n <st> -g <rg> --allow-shared-key-access false --min-
 az group delete -n <rg> --yes --no-wait          # only for sandbox RGs you created; check az account show first
 az deployment group delete -g <rg> -n <name>     # removes history only, not resources
 ```
+
+## Onboarding discovery
+
+Manual procedure; there is no Azure report executable yet. Follow the shared
+[report contract](../../cloud-onboarding/references/report-format.md). Compare
+`az account show --subscription "$SUB"` tenant/subscription/user with the expected
+scope before reading resources. Reader access is needed on each intended scope;
+Resource Graph can silently omit inaccessible subscriptions/resources.
+
+```sh
+az account show --subscription "$SUB" --query '{subscription:id,tenant:tenantId}'
+az graph query --subscriptions "$SUB" --first 1000 \
+  -q 'Resources | project id, type, location, resourceGroup | order by id asc'
+az advisor recommendation list --subscription "$SUB" \
+  --query '[].{id:id,category:category,impact:impact}'
+```
+
+Keep the query's returned pagination metadata. Continue with `--skip-token` until
+exhausted or report truncation; a single page is not inventory completeness.
+Assess selected network/storage/logging/backup properties with scoped read APIs;
+avoid unrestricted properties and tag values. Do not run locks, trigger-scan,
+get-credentials, or other write operations from the broader cheatsheet during
+onboarding. An unavailable Advisor service is unknown, not permission to enable it.
+
+Sources: [Resource Graph access](https://learn.microsoft.com/en-us/azure/governance/resource-graph/overview),
+[query CLI](https://learn.microsoft.com/en-us/cli/azure/graph),
+[Advisor](https://learn.microsoft.com/en-us/azure/advisor/advisor-overview).

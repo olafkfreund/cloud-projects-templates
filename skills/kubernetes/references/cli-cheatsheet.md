@@ -136,8 +136,8 @@ with `resources: [../../base]`, `patches:`, `configMapGenerator`, `images:`. Pre
 ```bash
 trivy image --severity HIGH,CRITICAL registry/app@sha256:…      # CVEs + secrets in the image
 trivy config ./k8s                                               # misconfig in manifests/charts
-trivy k8s --report summary                                       # live cluster (current context)
-trivy k8s --include-namespaces NS --report all
+trivy k8s --disable-node-collector --scanners misconfig --include-namespaces NS --report summary CONTEXT                                       # explicit context; no node jobs
+trivy k8s --disable-node-collector --scanners misconfig --include-namespaces NS --report all CONTEXT
 trivy fs --scanners secret .                                     # leaked kubeconfigs / tokens in the repo
 kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.containers[*].image}{"\n"}{end}' | grep -v '@sha256' # unpinned
 ```
@@ -164,3 +164,30 @@ kubectl patch cronjob NAME -n NS -p '{"spec":{"suspend":true}}'   # pause; commi
   local values go through `secret-run --only NAME -- kubectl …` and never echo.
 - `kubectl config view --raw` or `cat ~/.kube/config` in a shared terminal or log.
 - `helm install` into a namespace a GitOps controller manages.
+
+## Onboarding discovery
+
+Manual procedure; there is no Kubernetes report executable. Verify the expected
+context and API identity first, then restrict reads to agreed namespaces:
+
+```sh
+kubectl --context "$CONTEXT" auth whoami
+kubectl --context "$CONTEXT" auth can-i list pods --namespace "$NS"
+kubectl --context "$CONTEXT" get pods --namespace "$NS" --chunk-size=100 \
+  -o custom-columns='NAME:.metadata.name,PHASE:.status.phase,NODE:.spec.nodeName'
+trivy k8s --disable-node-collector --scanners misconfig --include-namespaces "$NS" --report summary "$CONTEXT"
+```
+
+RBAC must allow the particular resources being listed; do not request Secret
+reads or write permissions. kubectl follows chunked list pages; timeout, denied
+kinds/namespaces, or unavailable API groups make coverage partial. Trivy node
+checks are skipped because the node collector would create jobs. Review Trivy's
+read permissions and scope for the pinned version before optional use; summary
+output is not proof of complete CIS coverage. Do not save full pod YAML (it may
+contain environment secrets), unrestricted events/logs, or Trivy raw resources.
+Use the shared [report contract](../../cloud-onboarding/references/report-format.md).
+Exec/debug pods, port forwarding, restarts, cordon/drain, and the mutating commands
+elsewhere in this reference are outside onboarding.
+
+Sources: [chunked API reads](https://kubernetes.io/docs/reference/using-api/api-concepts/#retrieving-large-results-sets-in-chunks),
+[Trivy Kubernetes](https://trivy.dev/docs/latest/target/kubernetes/).

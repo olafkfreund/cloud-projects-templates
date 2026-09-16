@@ -136,3 +136,30 @@ secret-run --only DIGITALOCEAN_ACCESS_TOKEN,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_
 - **`--access-token` ignored**: a non-default `doctl auth` context is active; run `doctl auth switch --context default` or remove the context.
 - **`429 Too Many Requests`**: `doro account ratelimit` shows the reset time; agents polling lists should slow down.
 - **Command works with doctl but Terraform says forbidden**: Terraform read `DIGITALOCEAN_TOKEN` first; make sure only one of the two variables is set.
+
+## Onboarding discovery
+
+Manual procedure; no DigitalOcean report executable is installed. Use the `doro`
+read-token helper above with `--context default` explicitly to avoid a saved
+context selecting a different token. Compare account identity with the expected
+team, and the requested project ID with `projects get` before listing resources:
+
+```sh
+doro account get --context default
+doro projects get "$PROJECT_ID" --context default
+doro projects resources list "$PROJECT_ID" --context default --format URN,Status
+```
+
+The CLI lists project resources; direct API consumers must follow `links.pages`
+and record any interrupted pagination. The token needs `project:read` plus read
+scopes for each underlying resource type: results can silently omit resources
+without those scopes. Confirm expected resource families independently. Project
+membership is not a complete inventory of every team service.
+Review selected firewall, backup, LB health and existing monitoring metadata via
+the read commands above. Avoid app specs, database users and application logs in
+onboarding reports because they may contain sensitive payloads. Do not widen
+token scopes automatically. Use the shared
+[report contract](../../cloud-onboarding/references/report-format.md).
+
+Sources: [project resources](https://docs.digitalocean.com/reference/doctl/reference/projects/resources/list/),
+[token scopes and visibility](https://docs.digitalocean.com/reference/api/scopes/).

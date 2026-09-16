@@ -33,6 +33,14 @@ Cloud infrastructure project. It uses [devenv](https://devenv.sh) and was genera
 - **To change infrastructure,** write Terraform. Do not widen MCP permissions.
 - **Write access is opt-in.** See `references/mcp.md` in each provider skill.
 
+## Onboarding and troubleshooting
+
+- Use `.claude/skills/cloud-onboarding` for scoped discovery and evidence-based reports. AWS has `cloud-onboard-aws`; other providers have manual procedures.
+- Verify the expected identity and scope first. Denied reads and incomplete collection are unknown, never proof that a control passes or a resource is missing.
+- Keep `reports/` private and Git-ignored. Do not publish inventories or collect secrets, unrestricted logs, or workload payloads.
+- Use `.claude/skills/cloud-troubleshoot` for a named symptom. Diagnosis does not authorize remediation, collector jobs, or workload execution.
+- Re-running the generator adds missing skills without overwriting local edits. Update copied skills through reviewed diffs; `devenv update` changes remote modules, not skill copies.
+
 ## Providers
 
 <!-- provider:digitalocean:start -->

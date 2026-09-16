@@ -68,6 +68,8 @@ merge_mcp() { # existing entries win
 
 add_skill secrets
 add_skill terraform
+add_skill cloud-onboarding
+add_skill cloud-troubleshoot
 merge_mcp common
 
 for p in "${selected[@]}"; do
