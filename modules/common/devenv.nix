@@ -8,12 +8,13 @@ let
       args=()
       while read -r r; do [ -n "$r" ] && args+=(-r "$r"); done < <(
         nix-instantiate --eval --strict --json \
-          -E "(import $DEVENV_ROOT/secrets.nix).\"secrets/$1.age\".publicKeys" | jq -r '.[]'
+          --argstr secretFile "$DEVENV_ROOT/secrets.nix" --argstr name "$1" \
+          -E '{ secretFile, name }: (builtins.getAttr ("secrets/" + name + ".age") (import secretFile)).publicKeys' | jq -r '.[]'
       )
       [ ''${#args[@]} -gt 0 ] || { echo "no recipients for secrets/$1.age in secrets.nix" >&2; exit 1; }
     }
   '';
-  identity = ''id=''${AGENIX_IDENTITY:-$HOME/.ssh/id_ed25519}'';
+  identity = "id=\${AGENIX_IDENTITY:-$HOME/.ssh/id_ed25519}";
   secretPkgs = [
     pkgs.age
     pkgs.jq

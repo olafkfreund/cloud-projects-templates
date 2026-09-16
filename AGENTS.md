@@ -9,11 +9,12 @@ Generated projects get their own `AGENTS.md` from `templates/base/AGENTS.md`.
 |---|---|
 | `flake.nix` | `apps.default` (init script), `templates.*`, `checks` |
 | `pkgs/init.sh` | The only code path that builds a project, including the committed `templates/<p>` |
+| `pkgs/regenerate-templates.sh` | Maintainer wrapper: stages fresh projects, then replaces generated provider directories |
 | `modules/<p>/devenv.nix` | Tools, hooks and `enterTest` per provider. Imported remotely by projects as `cloud/modules/<p>` |
 | `modules/<p>/mcp.json` | Read-only MCP servers merged into the project's `.mcp.json` |
 | `skills/<p>/` | Agent Skills copied to `.claude/skills/<p>`. `secrets` and `terraform` are always copied |
 | `templates/base/` | Files every project starts with |
-| `templates/<p>/` | **Generated. Never hand-edit.** Regenerate with `nix run . -- <p> --into templates/<p>` |
+| `templates/<p>/` | **Generated. Never hand-edit.** Regenerate all providers from the repo root with `nix run .#regenerate-templates` |
 
 ## Rules
 
@@ -28,7 +29,7 @@ Generated projects get their own `AGENTS.md` from `templates/base/AGENTS.md`.
 1. Add `modules/<p>/devenv.nix` (packages and an `enterTest` with `--version` checks) and `modules/<p>/mcp.json` (read-only).
 2. Add `skills/<p>/SKILL.md` and `references/`.
 3. Add `<p>` to the provider list in `flake.nix` and to the CI matrix.
-4. Run `nix run . -- <p> --into templates/<p>` and `nix flake check`.
+4. Add new source files to Git's index so Nix includes them, then run `nix run .#regenerate-templates` and `nix flake check`.
 
 ## Workflow
 

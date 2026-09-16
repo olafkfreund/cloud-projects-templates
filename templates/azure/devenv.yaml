@@ -14,7 +14,6 @@ nixpkgs:
   # Only terraform (BUSL) is allowed as unfree. Add e.g. packer here to opt in.
   permitted_unfree_packages:
     - terraform
-# keep `imports:` last: `nix run … -- <provider>` appends to it
 imports:
   - cloud/modules/common
   - cloud/modules/azure
