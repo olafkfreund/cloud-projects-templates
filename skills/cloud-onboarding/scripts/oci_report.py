@@ -307,7 +307,14 @@ def collect(r, a):
                     "Bucket versioning.",
                     "Review recovery requirements.",
                 )
-    r.observed["regions"] = a.regions
+    r.observed["regions"] = [
+        region
+        for region in a.regions
+        if any(
+            op["status"] == "complete" and op["scope"].endswith("/" + region)
+            for op in r.operations
+        )
+    ]
 
 
 def main():

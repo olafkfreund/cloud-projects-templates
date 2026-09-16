@@ -76,7 +76,9 @@ def collect(r, a):
                 attrs.update(
                     {
                         "backup_present": bool(x["backup_window"])
-                        if "backup_window" in x
+                        if isinstance(x.get("backup_window"), str)
+                        else False
+                        if "backup_window" in x and x["backup_window"] is None
                         else None,
                         "delete_protection": obj(x.get("protection")).get("delete"),
                         "firewall_ids": [

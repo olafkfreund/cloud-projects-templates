@@ -79,9 +79,21 @@ def field(data, path):
     return data
 
 
+def scalar(value):
+    return value if value is None or type(value) in (str, bool, int) else None
+
+
 def selected(data, paths):
     # Callers specify exact fields, never retain arbitrary API dictionaries.
-    return {name: field(data, path) for name, path in paths.items()}
+    result = {}
+    for name, path in paths.items():
+        value = field(data, path)
+        result[name] = (
+            [scalar(item) for item in value]
+            if isinstance(value, list)
+            else scalar(value)
+        )
+    return result
 
 
 def segment(value):
@@ -149,6 +161,11 @@ def ingress_status(rules):
         ):
             unknown = True
             continue
+        if type(r["protocol"]) not in (str, int) or any(
+            not isinstance(s, str) for s in r["sources"]
+        ):
+            unknown = True
+            continue
         proto = str(r["protocol"]).lower()
         if proto not in ("tcp", "6", "all", "*", "-1"):
             continue
@@ -165,6 +182,29 @@ def ingress_status(rules):
             return "fail"
         unknown |= None in matches
     return "unknown" if unknown else "pass"
+
+
+def clean_ingress(rules):
+    if not isinstance(rules, list):
+        return None
+    result = []
+    for rule in rules:
+        rule = obj(rule)
+        result.append(
+            {
+                "active": rule.get("active")
+                if type(rule.get("active")) is bool
+                else None,
+                "protocol": scalar(rule.get("protocol")),
+                "sources": [scalar(v) for v in rule["sources"]]
+                if isinstance(rule.get("sources"), list)
+                else None,
+                "ports": [scalar(v) for v in rule["ports"]]
+                if isinstance(rule.get("ports"), list)
+                else None,
+            }
+        )
+    return result
 
 
 def bounded_process(argv, timeout, env):
@@ -373,6 +413,8 @@ class Report:
         self.evidence[index]["status"] = self.operations[index]["status"] = status
 
     def observe(self, eid, value):
+        if "ingress" in value:
+            value = dict(value, ingress=clean_ingress(value["ingress"]))
         self.evidence[int(eid[1:]) - 1]["observations"].setdefault(
             "details", []
         ).append(value)
@@ -433,6 +475,8 @@ class Report:
                 return records, False
 
     def resource(self, native_id, kind, scope, attributes, eid):
+        if "ingress" in attributes:
+            attributes = dict(attributes, ingress=clean_ingress(attributes["ingress"]))
         if not valid_id(str(native_id)) or native_id is None:
             self.mark(eid, "malformed")
             return None

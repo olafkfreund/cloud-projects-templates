@@ -50,6 +50,22 @@ def check_common():
         )
         == "pass"
     )
+    assert c.selected(
+        {"unexpected": {"secret": "DO_NOT_PERSIST"}}, {"safe": "unexpected"}
+    ) == {"safe": None}
+    assert (
+        c.ingress_status(
+            [
+                {
+                    "active": True,
+                    "protocol": {"secret": "DO_NOT_PERSIST"},
+                    "sources": ["0.0.0.0/0"],
+                    "ports": ["22"],
+                }
+            ]
+        )
+        == "unknown"
+    )
     args = c.parser("test").parse_args(["--environment", "test", "--max-items", "2"])
     report = c.Report("test", args, {}, "https://example.invalid", [])
     pages = {
@@ -406,6 +422,56 @@ def check_providers():
         ):
             oci_report.collect(report, args)
         assert any(f["status"] == "fail" for f in report.findings)
+    # A denied OCI regional read must not become observed regional coverage.
+    with tempfile.TemporaryDirectory() as temp:
+        config = Path(temp) / "config"
+        tenancy = "ocid1.tenancy.oc1..test"
+        config.write_text(
+            "[audit]\ntenancy=" + tenancy + "\nuser=ocid1.user.oc1..reader\n"
+        )
+        args = SimpleNamespace(
+            **base,
+            tenancy_id=tenancy,
+            compartment_ids=[tenancy],
+            regions=["eu-frankfurt-1"],
+            profile="audit",
+        )
+        report = c.Report("oci", args, {}, oci_report.SOURCE, [])
+
+        def denied_oci(argv):
+            if argv[1:4] == ["iam", "tenancy", "get"]:
+                return {"id": tenancy}
+            raise c.Failure("access_denied")
+
+        with (
+            patch.dict(os.environ, {"OCI_CLI_CONFIG_FILE": str(config)}),
+            patch.object(report, "cli", side_effect=denied_oci),
+        ):
+            oci_report.collect(report, args)
+        assert report.observed["regions"] == []
+    import hetzner_report
+
+    args = SimpleNamespace(**base, **cases["hetzner"])
+    report = c.Report("hetzner", args, {}, hetzner_report.SOURCE, [])
+
+    def malformed_backup(origin, path, token):
+        data = http(origin, path, token)
+        if "servers" in data:
+            data["servers"][0]["backup_window"] = {"secret": "DO_NOT_PERSIST"}
+        return data
+
+    with (
+        patch.dict(os.environ, env),
+        patch.object(report, "http", side_effect=malformed_backup),
+    ):
+        hetzner_report.collect(report, args)
+    assert (
+        next(f for f in report.findings if f["rule_id"] == "hetzner.backup_present")[
+            "status"
+        ]
+        == "unknown"
+    )
+    assert "DO_NOT_PERSIST" not in json.dumps(report.evidence)
     # Every collector emits coverage for denied post-identity reads.
     for provider, scope in cases.items():
         module = importlib.import_module(provider + "_report")

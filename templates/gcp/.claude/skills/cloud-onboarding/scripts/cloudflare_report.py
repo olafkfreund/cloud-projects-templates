@@ -89,6 +89,8 @@ def collect(r, a):
                 "setting." + setting, zone, lambda: get(base + "/settings/" + setting)
             )
             value = obj(obj(data).get("result")).get("value")
+            if not isinstance(value, str):
+                value = None
             rid = r.resource(zone, "zone", a.account_id, {}, eid)
             r.observe(eid, {"setting": setting, "value": value})
             if setting == "ssl":
