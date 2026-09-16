@@ -27,7 +27,7 @@ direnv allow        # or: devenv shell
 
 `nix run` and `nix flake init` write the project files: `AGENTS.md`, skills, `.mcp.json`, `secrets.nix` and `devenv.yaml`. `devenv --from …` only opens a temporary shell with the tools and writes none of these, so don't use it to start a project.
 
-Running `nix run … -- <provider>` again in an existing project adds that provider. It never overwrites your files.
+Running `nix run … -- <provider>` again in a generated project adds that provider while preserving existing skills and MCP overrides. It updates the YAML `imports` list even when other settings follow it. An actual addition may normalize YAML formatting; repeated additions leave the YAML unchanged. Malformed YAML or an `imports` value other than a list of strings is rejected before project changes.
 
 ## What you get
 
@@ -103,6 +103,17 @@ Projects import the modules from this repo at the revision pinned in `devenv.loc
 ## Contributing
 
 See [AGENTS.md](AGENTS.md). Changes follow `intent/` → `spec/` → `plan/`.
+
+After changing template sources, stage any new source files so Nix includes them, then run from this repository's root:
+
+```bash
+nix run .#regenerate-templates
+nix flake check -L
+```
+
+The maintainer command generates all providers before **replacing every generated `templates/<provider>` directory**, including obsolete files. It preserves `templates/base` and refuses symlinked destinations and nested Git repositories. Use ordinary `nix run … -- <provider>` for user projects. If replacement fails partway through, inspect `git diff` and restore only affected generated directories from Git before retrying.
+
+Flake checks cover template freshness, skill format, generator regressions, and generated MCP configuration (package pins, configured read-only restrictions, token mappings, and the GCP allowlist). Linux CI also tests secrets in a project path containing spaces and performs a credential-free Terraform MCP initialization and tool-list handshake. It does not invoke tools. Cloud-provider MCP startup and live read/write authorization remain [tracked separately in #11](https://github.com/olafkfreund/cloud-projects-templates/issues/11); passing these checks does not establish cloud permissions.
 
 ## License
 

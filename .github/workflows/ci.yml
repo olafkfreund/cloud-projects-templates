@@ -16,7 +16,7 @@ jobs:
       - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nix flake check -L # templates-fresh + skills
+      - run: nix flake check -L # templates, skills, generation, MCP configuration
 
   template:
     needs: flake
@@ -45,6 +45,15 @@ jobs:
           nix run . -- $PROVIDERS --into "$d"
           cd "$d" && git init -q && git add -A
           devenv --override-input cloud "path:$GITHUB_WORKSPACE" test
+      - name: Terraform MCP handshake (no cloud credentials)
+        if: matrix.os == 'ubuntu-latest' && matrix.providers == 'aws'
+        run: |
+          scratch=$(mktemp -d)
+          trap 'rm -rf -- "$scratch"' EXIT
+          nix run . -- aws --into "$scratch/project"
+          cd "$scratch/project"
+          git add -A
+          nix shell nixpkgs#python3 --command devenv --override-input cloud "path:$GITHUB_WORKSPACE" shell -- python3 "$GITHUB_WORKSPACE/tests/mcp-smoke.py" .mcp.json
 
   secrets:
     needs: flake
@@ -60,24 +69,13 @@ jobs:
       - run: nix profile add nixpkgs#devenv
       - name: secrets smoke test
         run: |
-          d=$(mktemp -d)
+          scratch=$(mktemp -d)
+          trap 'rm -rf -- "$scratch"' EXIT
+          d="$scratch/project with spaces"
           nix run . -- aws --into "$d"
-          cd "$d" && git init -q && git add -A
-          # shellcheck disable=SC2016 # expands inside the devenv shell
-          devenv --override-input cloud "path:$GITHUB_WORKSPACE" shell -- bash -euo pipefail -c '
-            nix shell nixpkgs#age -c age-keygen -o "$RUNNER_TEMP/key" 2>/dev/null
-            pub=$(nix shell nixpkgs#age -c age-keygen -y "$RUNNER_TEMP/key")
-            sed -i "s|# \"ssh-ed25519 AAAA… you@host\"|\"$pub\"|" secrets.nix
-            export AGENIX_IDENTITY=$RUNNER_TEMP/key
-            printf s3cr3t | secret-add T
-            test "$(secret-run --only T -- printenv T)" = s3cr3t
-            test "$(secret-list)" = T
-            secret-rekey
-            test "$(secret-run --only T -- printenv T)" = s3cr3t
-            ! grep -r s3cr3t --exclude-dir=.devenv --exclude-dir=.git .
-            printf x > secrets/plain && git add secrets/plain
-            ! git -c user.email=ci@ci -c user.name=ci commit -qm plaintext
-          '
+          cd "$d"
+          git add -A
+          devenv --override-input cloud "path:$GITHUB_WORKSPACE" shell -- bash "$GITHUB_WORKSPACE/tests/secrets.sh"
 
   secret-scan:
     runs-on: ubuntu-latest

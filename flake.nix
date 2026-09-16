@@ -44,6 +44,36 @@
         };
 
       checks = forAllSystems (pkgs: {
+        mcp-config =
+          pkgs.runCommand "mcp-config"
+            {
+              nativeBuildInputs = [ pkgs.jq ];
+            }
+            ''
+              bash ${./tests/mcp-config.sh} \
+                ${
+                  nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default
+                } ${toString providers}
+              touch $out
+            '';
+        generation =
+          pkgs.runCommand "generation"
+            {
+              nativeBuildInputs = [
+                pkgs.git
+                pkgs.jq
+                pkgs.yq-go
+                pkgs.diffutils
+                pkgs.findutils
+              ];
+            }
+            ''
+              bash ${./tests/generation.sh} \
+                ${nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default} \
+                ${nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.regenerate-templates} \
+                ${self} ${toString providers}
+              touch $out
+            '';
         # templates/<p> must equal what the init script generates
         templates-fresh = pkgs.runCommand "templates-fresh" { } ''
           for p in ${toString providers}; do
@@ -51,7 +81,7 @@
               nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default
             } "$p" --into "$TMPDIR/$p" 2>/dev/null
             ${pkgs.diffutils}/bin/diff -r --no-dereference -x .git "$TMPDIR/$p" ${self}/templates/$p \
-              || { echo "templates/$p is stale: run nix run . -- $p --into templates/$p"; exit 1; }
+              || { echo "templates/$p is stale: run nix run .#regenerate-templates from the repository root"; exit 1; }
           done
           touch $out
         '';
@@ -77,11 +107,25 @@
       formatter = forAllSystems (pkgs: pkgs.nixfmt);
 
       packages = forAllSystems (pkgs: {
+        regenerate-templates = pkgs.writeShellApplication {
+          name = "regenerate-templates";
+          runtimeInputs = [
+            pkgs.coreutils
+            pkgs.git
+            pkgs.findutils
+          ];
+          runtimeEnv = {
+            CLOUD_INIT = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+            CLOUD_PROVIDERS = toString providers;
+          };
+          text = builtins.readFile ./pkgs/regenerate-templates.sh;
+        };
         default = pkgs.writeShellApplication {
           name = "cloud-init";
           runtimeInputs = with pkgs; [
             coreutils
             jq
+            yq-go
             gnused
             gnugrep
             git
@@ -92,6 +136,10 @@
       });
 
       apps = forAllSystems (pkgs: {
+        regenerate-templates = {
+          type = "app";
+          program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.regenerate-templates;
+        };
         default = {
           type = "app";
           program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default;

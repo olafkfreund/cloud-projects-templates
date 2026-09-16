@@ -20,6 +20,19 @@ while [ $# -gt 0 ]; do
 done
 [ ${#selected[@]} -gt 0 ] || usage
 
+validate_yaml() {
+  yq -o=json '.' "$1" | jq -se '
+    length == 1 and (.[0] | type == "object" and
+      (.imports | type == "array" and all(.[]; type == "string")))
+  ' >/dev/null || {
+    echo "$1: expected one YAML mapping with an imports list of strings; fix it before adding providers" >&2
+    return 1
+  }
+}
+
+# Reject invalid existing configuration before creating even a Git repository.
+[ ! -e "$into/devenv.yaml" ] || validate_yaml "$into/devenv.yaml"
+
 mkdir -p "$into"
 cd "$into"
 # devenv git hooks need a repository
@@ -28,6 +41,16 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || git init -q
 copy() { cp -rn --no-preserve=mode "$@"; } # never overwrite, make store copies writable
 
 [ -f devenv.yaml ] || copy "$SRC/templates/base/." .
+
+for p in "${selected[@]}"; do
+  if ! yq -o=json '.imports' devenv.yaml | jq -e --arg import "cloud/modules/$p" 'index($import) != null' >/dev/null; then
+    yaml_tmp=$(mktemp .devenv.yaml.XXXXXX)
+    trap 'rm -f -- "$yaml_tmp"' EXIT
+    CLOUD_IMPORT="cloud/modules/$p" yq '.imports += [strenv(CLOUD_IMPORT)]' devenv.yaml >"$yaml_tmp"
+    validate_yaml "$yaml_tmp"
+    mv "$yaml_tmp" devenv.yaml
+  fi
+done
 
 add_skill() {
   mkdir -p .claude/skills .agents/skills
@@ -48,7 +71,6 @@ add_skill terraform
 merge_mcp common
 
 for p in "${selected[@]}"; do
-  grep -qx "  - cloud/modules/$p" devenv.yaml || printf '  - cloud/modules/%s\n' "$p" >>devenv.yaml
   add_skill "$p"
   merge_mcp "$p"
   for f in "$SRC/modules/$p"/*.json; do
