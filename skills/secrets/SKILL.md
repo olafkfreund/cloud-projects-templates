@@ -23,9 +23,11 @@ The format is standard [agenix](https://github.com/ryantm/agenix) (age-encrypted
 |---|---|
 | `secret-add NAME` | Encrypts a value read from stdin, or a hidden prompt, into `secrets/NAME.age`, and adds `NAME` to `secrets.nix`. `NAME` must match `^[A-Z][A-Z0-9_]*$` because it becomes an env var. |
 | `secret-edit NAME` | Replaces the value (same as `secret-add`). |
+| `secret-delete NAME` | Removes the encrypted file and its `secrets.nix` declaration after exact-name checks. Review the Git diff. |
 | `secret-list` | Prints names only, never values. |
 | `secret-run [--only A,B] -- CMD…` | Decrypts the selected secrets into env vars **for CMD only**, then runs it. Fails if an `--only` name doesn't exist. |
 | `secret-rekey` | Re-encrypts every secret for the current `secrets.nix` recipients, in memory. |
+| `secret-user-add PUBLIC_KEY [LABEL]` | Adds a validated SSH recipient and re-encrypts every secret. Review the Git diff. |
 
 The decryption identity is `$AGENIX_IDENTITY`, defaulting to `~/.ssh/id_ed25519`. An `age-keygen` key file also works.
 
@@ -53,9 +55,16 @@ For Terraform, mark such variables `sensitive = true`. Prefer ephemeral or write
 ## Team changes
 
 **Add a teammate:**
-1. Add their public key to `recipients`.
-2. Run `secret-rekey`.
+1. Run `secret-user-add 'ssh-ed25519 …' teammate`.
+2. Confirm the command rekeyed every secret successfully.
 3. Commit `secrets.nix` and `secrets/`.
+
+`secret-user-add` changes the shared recipient list and refuses malformed or
+duplicate keys. It does not grant access to old Git revisions.
+
+**Delete a secret:** run `secret-delete NAME`, then review the diff. If the
+value was exposed or committed previously, delete-and-rekey is not enough:
+rotate it at the provider.
 
 **Remove a teammate:**
 1. Delete their key from `recipients`.
