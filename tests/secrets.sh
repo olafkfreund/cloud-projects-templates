@@ -38,8 +38,8 @@ secret-delete T
 test "$(secret-list)" = ''
 [ ! -e secrets/T.age ]
 
-cp secrets.nix "$scratch/secrets.nix"
 printf %s "$SECRET_TEST_VALUE" | secret-add T
+cp secrets.nix "$scratch/secrets.nix"
 cp secrets/T.age "$scratch/T.age"
 printf '{}\n' >secrets.nix
 if printf %s "$SECRET_TEST_VALUE" | secret-add T; then
