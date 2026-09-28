@@ -123,7 +123,7 @@ in
         [ -z "$label" ] || [[ $label =~ ^[A-Za-z0-9._-]+$ ]] || { echo 'LABEL must contain only letters, digits, dot, underscore, or hyphen' >&2; exit 1; }
         printf '%s\n' "$key" | ssh-keygen -lf - >/dev/null 2>&1 || { echo 'invalid SSH public key' >&2; exit 1; }
         cd "$DEVENV_ROOT"
-        grep -Fq -- "    $key" secrets.nix && { echo 'public key is already a recipient' >&2; exit 1; }
+        grep -Fq -- "    \"$key\"" secrets.nix && { echo 'public key is already a recipient' >&2; exit 1; }
         backup=$(mktemp)
         trap 'cp -- "$backup" secrets.nix; rm -f -- "$backup"' EXIT
         cp -- secrets.nix "$backup"
