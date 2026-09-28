@@ -127,7 +127,7 @@ in
         backup=$(mktemp)
         trap 'cp -- "$backup" secrets.nix; rm -f -- "$backup"' EXIT
         cp -- secrets.nix "$backup"
-        line="  \"$key\";"
+        line="    \"$key\""
         [ -z "$label" ] || line="$line # $label"
         sed -i "/# secret-user-add inserts recipients above this line/i\\$line" secrets.nix
         secret-rekey
