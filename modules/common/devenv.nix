@@ -19,6 +19,7 @@ let
     pkgs.age
     pkgs.jq
     pkgs.gnused
+    pkgs.openssh
   ];
 in
 {
@@ -83,6 +84,57 @@ in
     secret-edit = {
       description = "Replace a secret's value (same as secret-add)";
       exec = ''exec secret-add "$@"'';
+    };
+    secret-delete = {
+      description = "Delete one encrypted secret and its declaration";
+      packages = secretPkgs;
+      exec = ''
+        set -euo pipefail
+        name=''${1:?usage: secret-delete NAME}
+        [ $# = 1 ] || { echo 'usage: secret-delete NAME' >&2; exit 1; }
+        [[ $name =~ ^[A-Z][A-Z0-9_]*$ ]] || { echo "NAME must match ^[A-Z][A-Z0-9_]*$" >&2; exit 1; }
+        cd "$DEVENV_ROOT"
+        file="secrets/$name.age"
+        [ -f "$file" ] && [ ! -L "$file" ] || { echo "missing encrypted secret: $file" >&2; exit 1; }
+        entry="\"$file\".publicKeys = recipients;"
+        grep -Fqx -- "  $entry" secrets.nix || { echo "missing declaration for $file" >&2; exit 1; }
+        backup=$(mktemp -d)
+        trap 'cp -- "$backup/secrets.nix" secrets.nix; cp -- "$backup/secret.age" "$file"; rm -rf -- "$backup"' EXIT
+        cp -- secrets.nix "$backup/secrets.nix"
+        cp -- "$file" "$backup/secret.age"
+        tmp=$(mktemp secrets.nix.XXXXXX)
+        grep -Fvx -- "  $entry" secrets.nix >"$tmp"
+        mv -- "$tmp" secrets.nix
+        rm -- "$file"
+        trap - EXIT
+        rm -rf -- "$backup"
+        echo "deleted $file; review the Git diff" >&2
+      '';
+    };
+    secret-user-add = {
+      description = "Add an SSH recipient and re-encrypt all secrets";
+      packages = secretPkgs;
+      exec = ''
+        set -euo pipefail
+        key=''${1:?usage: secret-user-add SSH_PUBLIC_KEY [LABEL]}
+        label=''${2:-}
+        [ $# -le 2 ] || { echo 'usage: secret-user-add SSH_PUBLIC_KEY [LABEL]' >&2; exit 1; }
+        [[ $key != *$'\n'* && $key != *'"'* && $key != *'\\'* ]] || { echo 'public key contains unsafe characters' >&2; exit 1; }
+        [ -z "$label" ] || [[ $label =~ ^[A-Za-z0-9._-]+$ ]] || { echo 'LABEL must contain only letters, digits, dot, underscore, or hyphen' >&2; exit 1; }
+        printf '%s\n' "$key" | ssh-keygen -lf - >/dev/null 2>&1 || { echo 'invalid SSH public key' >&2; exit 1; }
+        cd "$DEVENV_ROOT"
+        grep -Fq -- "    \"$key\"" secrets.nix && { echo 'public key is already a recipient' >&2; exit 1; }
+        backup=$(mktemp)
+        trap 'cp -- "$backup" secrets.nix; rm -f -- "$backup"' EXIT
+        cp -- secrets.nix "$backup"
+        line="    \"$key\""
+        [ -z "$label" ] || line="$line # $label"
+        sed -i "/# secret-user-add inserts recipients above this line/i\\$line" secrets.nix
+        secret-rekey
+        trap - EXIT
+        rm -f -- "$backup"
+        echo 'recipient added and secrets rekeyed; review the Git diff' >&2
+      '';
     };
     secret-list = {
       description = "List secret names (never values)";

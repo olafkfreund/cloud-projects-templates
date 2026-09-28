@@ -22,6 +22,8 @@ Cloud infrastructure project. It uses [devenv](https://devenv.sh) and was genera
 ## Secrets (agenix)
 
 - **Store secrets with** `printf %s "$VALUE" | secret-add NAME` or `secret-add NAME` (hidden prompt). They are committed encrypted as `secrets/NAME.age`.
+- **Edit or delete secrets with** `secret-edit NAME` or `secret-delete NAME`; review the Git diff after either operation.
+- **Add a teammate with** `secret-user-add 'ssh-ed25519 …' LABEL`; it validates the key and re-encrypts all secrets.
 - **Use secrets** with `secret-run --only NAME -- <command>`. The value exists only in that command's environment.
 - **Never** print, `echo`, `cat` or log a secret value, write it to a file, or paste it into chat, code, tfvars or commit messages.
 - **Follow the `secrets` skill** (`.claude/skills/secrets`) for rotation and recipients.

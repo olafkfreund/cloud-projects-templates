@@ -10,15 +10,35 @@ scratch=$(mktemp -d)
 trap 'rm -rf -- "$scratch"' EXIT
 age-keygen -o "$scratch/key" 2>/dev/null
 pub=$(age-keygen -y "$scratch/key")
+ssh-keygen -q -t ed25519 -N '' -f "$scratch/key2"
+pub2=$(cat "$scratch/key2.pub")
 sed -i "s|# \"ssh-ed25519 AAAA… you@host\"|\"$pub\"|" secrets.nix
 export AGENIX_IDENTITY="$scratch/key"
 export SECRET_TEST_VALUE=cloud-template-smoke-value
 printf %s "$SECRET_TEST_VALUE" | secret-add T
 secret-run --only T -- bash -c 'test "$T" = "$SECRET_TEST_VALUE"'
 test "$(secret-list)" = T
+if secret-user-add not-a-public-key; then
+  echo 'secret-user-add accepted an invalid key' >&2; exit 1
+fi
+secret-user-add "$pub2" teammate
+if secret-user-add "$pub2" teammate; then
+  echo 'secret-user-add accepted a duplicate key' >&2; exit 1
+fi
+export AGENIX_IDENTITY="$scratch/key2"
+secret-run --only T -- bash -c 'test "$T" = "$SECRET_TEST_VALUE"'
+export AGENIX_IDENTITY="$scratch/key"
 secret-rekey
 secret-run --only T -- bash -c 'test "$T" = "$SECRET_TEST_VALUE"'
 
+if secret-delete MISSING; then
+  echo 'secret-delete accepted a missing secret' >&2; exit 1
+fi
+secret-delete T
+test "$(secret-list)" = ''
+[ ! -e secrets/T.age ]
+
+printf %s "$SECRET_TEST_VALUE" | secret-add T
 cp secrets.nix "$scratch/secrets.nix"
 cp secrets/T.age "$scratch/T.age"
 printf '{}\n' >secrets.nix
