@@ -3,6 +3,7 @@
 let
   recipients = [
     # "ssh-ed25519 AAAA… you@host"
+    # secret-user-add inserts recipients above this line
   ];
 in
 {
